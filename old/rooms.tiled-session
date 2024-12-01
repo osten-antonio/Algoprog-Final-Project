@@ -1,0 +1,71 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "untitled.tmx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "": {
+            "scaleInEditor": 1
+        },
+        "Rooms/Level 1/03.tmx": {
+            "scale": 2,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 106.75,
+                "y": 57.5
+            }
+        },
+        "Rooms/Level 1/03.tmx#Tileset": {
+            "scaleInDock": 1.5
+        },
+        "Tileset.tsx": {
+            "scaleInDock": 0.75,
+            "scaleInEditor": 1
+        },
+        "Tileset2.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "untitled.tmx": {
+            "scale": 3,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 106.16666666666667,
+                "y": 112.66666666666664
+            }
+        },
+        "untitled.tmx#Tileset": {
+            "scaleInDock": 1.5
+        }
+    },
+    "last.exportedFilePath": "D:/Documents/Algoprog-Final-Project/Rooms/Level 1",
+    "last.imagePath": "D:/Documents/Algoprog-Final-Project/Assets",
+    "map.height": 15,
+    "map.lastUsedExportFilter": "CSV files (*.csv)",
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "map.width": 15,
+    "openFiles": [
+        "Tileset.tsx",
+        "untitled.tmx",
+        "Tileset2.tsx",
+        "Tileset2.tsx"
+    ],
+    "project": "rooms.tiled-project",
+    "recentFiles": [
+        "untitled.tmx",
+        "Tileset.tsx",
+        "Tileset2.tsx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    }
+}

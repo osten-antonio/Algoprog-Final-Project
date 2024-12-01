@@ -1,0 +1,24 @@
+Entities
+
+Create a class for each entity, assign weights to each of them (determining the spawn rate)
+In each class, define their moveset, and pathing, etc
+
+Rooms
+
+Divide the rooms into 3 difficulty
+Create an list for each difficulty for the Entities
+Create a class for each possible room (10 layout each difficulty? so probably total 30 with 3 boss rooms)
+Each room will be the same size except for the boss room
+Boss room will be 3x bigger than normal rooms
+
+GUI
+
+Contains GUI constructor
+
+Main
+
+Player input, and room creation
+Actual game -> Gets coin depending on how many rooms they clear, extra money for every boss they defeat
+    - Difficulty multiplier 
+Shop
+Leaderboard -> Score
