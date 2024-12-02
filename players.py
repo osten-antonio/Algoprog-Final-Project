@@ -14,9 +14,9 @@ spritesheets = {
 }
 
 def get_frames(sheet, nFrame, width, height, scale):
-    frame = pygame.Surface((width, height), pygame.SRCALPHA).convert_alpha()
+    frame = pygame.Surface((width, height), pygame.SRCALPHA,masks=None)
     frame.blit(sheet, (0, 0), (nFrame * width, 0, width, height))
-    frame = pygame.transform.scale(frame, (int(width * scale), int(height * scale)))
+    frame = pygame.transform.scale(frame, (int(width * scale), int(height * scale))) 
     return frame
 
 class Player(pygame.sprite.Sprite):
@@ -34,15 +34,17 @@ class Player(pygame.sprite.Sprite):
         self.current_sprite = 0
         self.current_state = "idle"
         self.image = self.spritesheets[self.current_state][int(self.current_sprite)]
-
-        self.rect = self.image.get_frect(topleft = pos)
-        self.rect.height=16*2.8
-        self.rect.width=16*2.8
-
+        self.rect = self.image.get_frect(center = pos)
+        self.rect.height=16*2.6
+        self.rect.width=16*2.3
+        self.image = self.image
         self.is_moving=False
+        position=[0,0]
+        position[0],position[1]=pos[0]-13,pos[1]-15
+        self.hitbox=pygame.FRect(position,(23,33))
         # movement 
         self.direction = vector()
-        self.speed = 500
+        self.speed = 100
         self.velocity=vector()
 
         self.flipped=False
@@ -51,21 +53,21 @@ class Player(pygame.sprite.Sprite):
     def input(self):
         keys = pygame.key.get_pressed()
         keybinds=[
-            pygame.K_d,pygame.K_a,pygame.K_w,pygame.K_s
+            pygame.K_RIGHT,pygame.K_LEFT,pygame.K_UP,pygame.K_DOWN
         ]
         input_vector = vector(0,0)
-        if keys[pygame.K_d]:
+        if keys[pygame.K_RIGHT]:
             input_vector.x += 1
             self.is_moving = True
             self.flipped= False
-        if keys[pygame.K_a]:
+        if keys[pygame.K_LEFT]:
             input_vector.x -= 1
             self.is_moving = True
             self.flipped= True
-        if keys[pygame.K_w]:
+        if keys[pygame.K_UP]:
             input_vector.y -= 1
             self.is_moving = True
-        if keys[pygame.K_s]:
+        if keys[pygame.K_DOWN]:
             input_vector.y += 1
             self.is_moving = True
         if not any(keys[key] for key in keybinds):
@@ -75,30 +77,34 @@ class Player(pygame.sprite.Sprite):
         
 
     def move(self, dt):
-        position = self.rect.topleft
-        self.rect.x += self.direction[0] * self.speed * dt
-        print(dt)
+        position = self.hitbox.topleft
+        self.hitbox.x += self.direction[0] * self.speed * dt
+        # print(dt)
         self.check_collision('x')
-        self.rect.y += self.direction[1] * self.speed * dt
+        self.hitbox.y += self.direction[1] * self.speed * dt
         self.check_collision('y')
-        self.velocity=vector(self.rect.x - position[0],self.rect.y - position[1])
+        self.velocity=vector(self.hitbox.x - position[0],self.hitbox.y - position[1])
     def check_collision(self,axis):
         for sprite in self.collision_sprites:
-            if sprite.rect.colliderect(self.rect):
-                print(f"Collision detected on {axis} axis with {sprite}")
+                
+            if sprite.rect.colliderect(self.hitbox):
+                # print(f"Collision detected on {axis} axis with {sprite}")
                 if axis == 'x':
                     # Resolve horizontal collision (left-right)
                     if self.direction.x > 0:  # Moving right
-                        self.rect.right = sprite.rect.left
+                        print("x >")
+                        self.hitbox.right = sprite.rect.left 
                     if self.direction.x < 0:  # Moving left
-                        self.rect.left = sprite.rect.right
+                        print("x <")
+                        self.hitbox.left = sprite.rect.right 
                 elif axis == 'y':
-                    
                     # Resolve vertical collision (up-down)
                     if self.direction.y > 0:  # Moving down
-                        self.rect.bottom = sprite.rect.top
+                        print("y >")
+                        self.hitbox.bottom = sprite.rect.top 
                     if self.direction.y < 0:  # Moving up
-                        self.rect.top = sprite.rect.bottom
+                        print("x <")
+                        self.hitbox.top = sprite.rect.bottom 
 
     def update(self, dt):
          # Increment the current sprite with a speed modifier (adjust 0.01 as needed)
@@ -114,9 +120,6 @@ class Player(pygame.sprite.Sprite):
 
         # Flip the sprite if needed
         self.image = pygame.transform.flip(base_image, True, False) if self.flipped else base_image
-
-        # Hitbox
-        pygame.draw.rect(pygame.display.get_surface(), 'red', self.rect, 2)
 
         # Animation state based on movement
         self.current_state = "move" if self.is_moving else "idle"

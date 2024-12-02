@@ -134,33 +134,32 @@ class Level:
         current_room_rect = self.rooms[current_room_key].rect
         moved = False  # Flag to prevent multiple updates in one frame
 
-        if self.player.rect.left < current_room_rect.left and not moved:
+        if self.player.hitbox.left < current_room_rect.left and not moved:
             # Move left
             self.current_room[0] -= 1
             moved = True
-        elif self.player.rect.right > current_room_rect.right and not moved:
+        elif self.player.hitbox.right > current_room_rect.right and not moved:
             # Move right
             self.current_room[0] += 1
             moved = True
-        elif self.player.rect.top < current_room_rect.top and not moved:
+        elif self.player.hitbox.top < current_room_rect.top and not moved:
             # Move up
             self.current_room[1] -= 1
             moved = True
-        elif self.player.rect.bottom > current_room_rect.bottom and not moved:
+        elif self.player.hitbox.bottom > current_room_rect.bottom and not moved:
             # Move down
             self.current_room[1] += 1
             moved = True
-        # print(f"Player: {self.current_room}")
+
         
         # Draw layers in order
-
         for sprite in self.layers['water']:
             self.display_surface.blit(sprite.image, sprite.rect)
         for sprite in self.layers['floor']:
             self.display_surface.blit(sprite.image, sprite.rect)
         for sprite in self.layers['decorations']:
             self.display_surface.blit(sprite.image, sprite.rect)
-        self.display_surface.blit(self.player.image, self.player.rect)
+        # self.display_surface.blit(self.player.image, self.player.rect)
         for sprite in self.layers['walls']:
             self.display_surface.blit(sprite.image, sprite.rect)
         for sprite in self.layers['decorations2']:
@@ -173,5 +172,7 @@ class Level:
         for sprite in self.bounding_box:
             sprite.rect.x -= self.player.velocity.x
             sprite.rect.y -= self.player.velocity.y
+        pygame.draw.rect(self.display_surface, (255, 0, 0), self.player.hitbox,2)
+        pygame.draw.rect(self.display_surface, (255, 0, 0), self.player.rect,2)
         for i in self.rooms:
             pygame.draw.rect(self.display_surface, (255, 0, 0), self.rooms[str(i)],2) # Draw binding box for testing purposes
