@@ -16,3 +16,4 @@ class bounding_box(pygame.sprite.Sprite):
         super().__init__(groups)
         self.rect = pygame.FRect(x,y,height,width)
 
+# Enemy sprite, scale

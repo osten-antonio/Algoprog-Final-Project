@@ -11,14 +11,13 @@ class Level:
         # Groups for different types of objects
         self.all_sprites = pygame.sprite.Group()
         self.collision_sprites = pygame.sprite.Group()
+        
         self.bounding_box = pygame.sprite.Group()
         self.rooms = defaultdict(pygame.sprite.Sprite)
         self.current_room = [0, 0]
-        # Set camera vector (used for following the player)
-        self.camera_vector = vector(0, 0)
+
         self.visited_room = []
-        # Room files (for loading different levels)
-        self.room_files = [join('./Rooms/Level 1/', file) for file in listdir('./Rooms/Level 1') if file.endswith('.tmx')]
+
         self.room_size = (15 * TILE_SIZE, 15 * TILE_SIZE)
         self.setup(tmx_map)
 
@@ -81,7 +80,7 @@ class Level:
             self.layers['water'].append(Sprite((x*TILE_SIZE+pos[0], y*TILE_SIZE+pos[1]), surf, (self.all_sprites,self.collision_sprites)))
         # Load the floor layer (bg tiles, path, etc.)
         for x, y, surf in chosen_room.get_layer_by_name('Floor').tiles():
-            self.layers['floor'].append(Sprite((x*TILE_SIZE+pos[0], y*TILE_SIZE+pos[1]), surf, (self.all_sprites,)))
+            self.layers['floor'].append(Sprite((x*TILE_SIZE+pos[0], y*TILE_SIZE+pos[1]), surf, (self.all_sprites)))
 
         # Load the walls layer (collidable objects)
         for x, y, surf in chosen_room.get_layer_by_name('Walls').tiles():
@@ -89,11 +88,11 @@ class Level:
 
         # Load decorations layer
         for x, y, surf in chosen_room.get_layer_by_name('Decorations').tiles():
-            self.layers['decorations'].append(Sprite((x*TILE_SIZE+pos[0], y*TILE_SIZE+pos[1]), surf, (self.all_sprites,)))
+            self.layers['decorations'].append(Sprite((x*TILE_SIZE+pos[0], y*TILE_SIZE+pos[1]), surf, (self.all_sprites)))
 
         # Load decorations2 layer
         for x, y, surf in chosen_room.get_layer_by_name('Decorations2').tiles():
-            self.layers['decorations2'].append(Sprite((x*TILE_SIZE+pos[0], y*TILE_SIZE+pos[1]), surf, (self.all_sprites,)))
+            self.layers['decorations2'].append(Sprite((x*TILE_SIZE+pos[0], y*TILE_SIZE+pos[1]), surf, (self.all_sprites)))
         
 
     def generate_adjacent(self,current_room):
@@ -119,60 +118,56 @@ class Level:
                 self.rooms[adjacent_room_key] = bounding_box(offset_x, offset_y, 15 * TILE_SIZE, 15 * TILE_SIZE, self.bounding_box)
                 self.generate((offset_x+30, offset_y+25))
 
+    
     def run(self, dt):
-        self.all_sprites.update(dt)
-        offset_x = (WIDTH / 2) - (15 * TILE_SIZE / 2) + TILE_SIZE-10
-        offset_y = (HEIGHT / 2) - (15 * TILE_SIZE / 2) + TILE_SIZE
-        current_room,current_room_key = str(self.current_room),str(self.current_room)
+        # Calculate the camera offset
+        camera_offset = vector(WIDTH // 2 - self.player.rect.centerx, HEIGHT // 2 - self.player.rect.centery)
         
-        # print(current_room)
-            # Ensure the current room exists
+        # Update all sprites
+        self.all_sprites.update(dt)
+
+        # Room boundary
+        current_room_key = str(self.current_room)
+        current_room_rect = self.rooms[current_room_key].rect
+        moved=False
+
         if current_room_key not in self.visited_room:
             self.generate_adjacent(self.current_room)
-
-        # Room boundary checks
-        current_room_rect = self.rooms[current_room_key].rect
-        moved = False  # Flag to prevent multiple updates in one frame
-
-        if self.player.hitbox.left < current_room_rect.left and not moved:
+        if self.player.rect.left < current_room_rect.left and not moved:
             # Move left
             self.current_room[0] -= 1
             moved = True
-        elif self.player.hitbox.right > current_room_rect.right and not moved:
+        elif self.player.rect.right > current_room_rect.right and not moved:
             # Move right
             self.current_room[0] += 1
             moved = True
-        elif self.player.hitbox.top < current_room_rect.top and not moved:
+        elif self.player.rect.top < current_room_rect.top and not moved:
             # Move up
             self.current_room[1] -= 1
             moved = True
-        elif self.player.hitbox.bottom > current_room_rect.bottom and not moved:
+        elif self.player.rect.bottom > current_room_rect.bottom and not moved:
             # Move down
             self.current_room[1] += 1
             moved = True
 
-        
-        # Draw layers in order
-        for sprite in self.layers['water']:
-            self.display_surface.blit(sprite.image, sprite.rect)
-        for sprite in self.layers['floor']:
-            self.display_surface.blit(sprite.image, sprite.rect)
-        for sprite in self.layers['decorations']:
-            self.display_surface.blit(sprite.image, sprite.rect)
-        # self.display_surface.blit(self.player.image, self.player.rect)
-        for sprite in self.layers['walls']:
-            self.display_surface.blit(sprite.image, sprite.rect)
-        for sprite in self.layers['decorations2']:
-            self.display_surface.blit(sprite.image, sprite.rect)
 
-        # Moves all sprite relative to player's movement
-        for sprite in self.all_sprites:
-            sprite.rect.x -= self.player.velocity.x
-            sprite.rect.y -= self.player.velocity.y
-        for sprite in self.bounding_box:
-            sprite.rect.x -= self.player.velocity.x
-            sprite.rect.y -= self.player.velocity.y
-        pygame.draw.rect(self.display_surface, (255, 0, 0), self.player.hitbox,2)
-        pygame.draw.rect(self.display_surface, (255, 0, 0), self.player.rect,2)
-        for i in self.rooms:
-            pygame.draw.rect(self.display_surface, (255, 0, 0), self.rooms[str(i)],2) # Draw binding box for testing purposes
+        # Draw layers with camera offset
+        for sprite in self.layers['water']:
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+        for sprite in self.layers['floor']:
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+        for sprite in self.layers['decorations']:
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+
+        self.display_surface.blit(self.player.image, (WIDTH // 2 - self.player.rect.width // 2, HEIGHT // 2 - self.player.rect.height // 2))
+        
+        for sprite in self.layers['walls']:
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+        for sprite in self.layers['decorations2']:
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+
+
+        pygame.draw.rect(self.display_surface, "red", self.player.hitbox.move(camera_offset), 2)  # Player hitbox
+        pygame.draw.rect(self.display_surface, "blue", self.player.rect.move(camera_offset), 2)  # Player image rect
+        for room_key, room in self.rooms.items():
+            pygame.draw.rect(self.display_surface, (255, 0, 0), room.rect.move(camera_offset), 2)  # Room bounding boxes
