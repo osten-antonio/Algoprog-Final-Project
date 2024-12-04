@@ -21,6 +21,11 @@ def get_frames(sheet, nFrame, width, height, scale):
     frame = pygame.transform.scale(frame, (int(width * scale), int(height * scale)))
     return frame
 
+def get_enemy_frames(sheet, nframe, width =16, height = 16, scale = 2.7):
+    frame = pygame.Surface((width, height), pygame.SRCALPHA).convert_alpha()
+    frame.blit(sheet, (0, 0), (nframe * width, 0, width, height))
+    frame = pygame.transform.scale(frame, (int(width * scale), int(height * scale)))
+    return frame
 class Player(pygame.sprite.Sprite):
     swing_range = 50
     health = 100
@@ -85,7 +90,6 @@ class Player(pygame.sprite.Sprite):
             self.is_moving = False
         self.direction = input_vector.normalize() if input_vector else input_vector
     
-
     def move(self, dt):
         # Save the previous position for resolving collisions
         original_position = vector(self.hitbox.topleft)
@@ -151,26 +155,94 @@ class Player(pygame.sprite.Sprite):
         self.input()
         self.move(dt)
     
-
     # TODO Dash (I frames)
-class Enemy(pygame.sprite.Sprite):  # TODO
-    def __init__(self, pos, groups, scale=2.6, speed=2):
+    
+class Enemy(pygame.sprite.Sprite):  # TODO Code moveement
+    def __init__(self, pos, groups, player_instance, collision_sprites, speed=2):
         super().__init__(groups)
         self.current_frame = 0
         self.animation_speed = 0.01
-        
-        # self.frames=[get_frames(spritesheets["test_enemy"], i, 16, 16, 2.7) for i in range(4)]
-        # self.image = self.frames[self.current_frame]  # Set the initial frame
-        self.rect = pygame.Rect(5,5,5,5)
-        
+        self.spritesheet=spritesheets["test_enemy"]
+        self.player = player_instance
+
+        self.frames = [get_enemy_frames(self.spritesheet,i) for i in range(4)]
+        self.image = self.frames[int(self.current_frame)]
+        self.rect = self.image.get_frect(topleft = pos)
+        self.hitbox=pygame.FRect((self.rect.topleft[0]+10,self.rect.topleft[1]+10),(16,32))
+        self.flipped = False
         self.speed = speed
-    
+        self.change_direction_timer = random.randint(30, 50)
+        self.collision_sprites = collision_sprites
+        self.timer_counter=0
+        self.direction = vector()
+        self.velocity= vector()
+    def check_collision(self, axis):
+        for sprite in self.collision_sprites:
+            if sprite.rect.colliderect(self.hitbox):
+                if axis == 'x':
+                    if self.direction.x > 0:  # Moving right
+                        self.hitbox.right = sprite.rect.left
+                    elif self.direction.x < 0:  # Moving left
+                        self.hitbox.left = sprite.rect.right
+                    # Prevent movement after collision
+                    self.velocity.x = 0
+                elif axis == 'y':
+                    if self.direction.y > 0:  # Moving down
+                        self.hitbox.bottom = sprite.rect.top
+                    elif self.direction.y < 0:  # Moving up
+                        self.hitbox.top = sprite.rect.bottom
+                    # Prevent movement after collision
+                    self.velocity.y = 0
+    def move(self,dt):
+        room_size = 15 * TILE_SIZE
+        self.timer_counter += 1
+        movement_vector = vector(0,0)
+        if self.timer_counter >= self.change_direction_timer:
+            wait_time=0
+            movement_vector.x += random.choice([-20, 20])
+            movement_vector.y += random.choice([-20, 20])
+            self.timer_counter = 0
+            for _ in range(60): # TODO Add stops
+                wait_time+=1
+                if wait_time == 59:
+                    wait_time=0
+            self.direction = movement_vector
 
-    def update(self,*args, **kwargs):
+
+        original_position = vector(self.hitbox.topleft)
+        
+        # Move the hitbox based on the direction
+        self.hitbox.x += self.direction.x * self.speed * dt
+        self.check_collision('x')
+        self.hitbox.y += self.direction.y * self.speed * dt
+        self.check_collision('y')
+
+        # Update velocity based on the new position
+        self.velocity = vector(self.hitbox.left - original_position.x, self.hitbox.top - original_position.y)
+
+        # Align the visual rectangle with the hitbox
+        self.rect.center = (self.hitbox.centerx, self.hitbox.centery - 8)
+
+        
+    def update(self, dt):
         self.current_frame += self.animation_speed
-        # if self.current_frame >= len(self.frames):
-        #     self.current_frame = 0
-        # self.image = self.frames[int(self.current_frame)]
+        if self.current_frame >= len(self.frames):
+            self.current_frame = 0
+        
+        cur_frame = self.frames[int(self.current_frame)]
+       
+        if self.rect.centerx > self.player.hitbox.centerx:
+            self.flipped = True
+        if self.rect.centerx < self.player.hitbox.centerx:
+            self.flipped = False
+        
+        self.image = pygame.transform.flip(cur_frame, True, False) if self.flipped else cur_frame
+        self.move(dt)
 
+# TODO enemy types
+
+# TODO diff enemies
+
+# TODO Fog of war 
 
 

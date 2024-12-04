@@ -21,6 +21,7 @@ class Level:
         self.room_size = (15 * TILE_SIZE, 15 * TILE_SIZE)
         self.setup(tmx_map)
         self.spawned_enemies = []
+        self.test=[]
     def setup(self, tmx_map):
 
         self.layers = {
@@ -121,14 +122,14 @@ class Level:
                 if adjacent_room_key not in self.visited_room:
                     self.spawn_enemies(self.rooms[adjacent_room_key].rect)
 
-    def spawn_enemies(self, bounding_box, max_enemies = 5):
+    def spawn_enemies(self, bounding_box, max_enemies = 10):
         for _ in range(max_enemies):
             attempts = 0
             valid_position = False
 
             while not valid_position and attempts < 100:  # Limit attempts to prevent infinite loops
-                x = random.randint(bounding_box.left, bounding_box.right - TILE_SIZE)
-                y = random.randint(bounding_box.top, bounding_box.bottom - TILE_SIZE)
+                x = random.randint(int(bounding_box.left), int(bounding_box.right) - TILE_SIZE)
+                y = random.randint(int(bounding_box.top), int(bounding_box.bottom) - TILE_SIZE)
                 
                 # Temporary rect for collision check
                 temp_rect = pygame.Rect(x, y, TILE_SIZE-20, TILE_SIZE-20)
@@ -141,6 +142,7 @@ class Level:
                 attempts += 1
 
             if valid_position:
+                self.test.append(Enemy((x,y),self.all_sprites,self.player,self.collision_sprites))
                 self.spawned_enemies.append(pygame.Rect(x, y, TILE_SIZE, TILE_SIZE))
 
                 # self.all_sprites.add(enemy)
@@ -177,6 +179,7 @@ class Level:
             moved = True
 
 
+
         # Draw layers with camera offset
         for sprite in self.layers['water']:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
@@ -195,6 +198,10 @@ class Level:
         for enemy_rect in self.spawned_enemies: # SPawned enemies
             pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
 
+        for sprite in self.test:
+            print(sprite)
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+            pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
 
         pygame.draw.rect(self.display_surface, "green", self.player_melee.rect.move(camera_offset), 2)
         pygame.draw.rect(self.display_surface, "red", self.player.hitbox.move(camera_offset), 2)  # Player hitbox
