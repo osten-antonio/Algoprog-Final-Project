@@ -203,6 +203,7 @@ class Level:
             # print(sprite)
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
             pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
+            pygame.draw.rect(self.display_surface, "red", sprite.notice_range.move(camera_offset), 2)
 
         pygame.draw.rect(self.display_surface, "green", self.player.swing.rect.move(camera_offset), 2)
         pygame.draw.rect(self.display_surface, "red", self.player.hitbox.move(camera_offset), 2)  # Player hitbox

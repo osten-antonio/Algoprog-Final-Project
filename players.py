@@ -1,5 +1,5 @@
 from settings import *
-from math import ceil
+from math import ceil,sqrt
 from sprites import PlayerSwing
 import random
 
@@ -70,8 +70,8 @@ class Player(pygame.sprite.Sprite):
         self.collision_sprites = collision_sprites
         self.enemy_group = enemy_group
 
-        self.breadcrumb_interval = 500 # Time interval for leaving a breadcrumb (in milliseconds)
-        self.breadcrumb_lifetime = 6000  # Time to keep a breadcrumb (in milliseconds)
+        self.breadcrumb_interval = 100 # Time interval for leaving a breadcrumb (in milliseconds)
+        self.breadcrumb_lifetime = 400  # Time to keep a breadcrumb (in milliseconds)
         self.breadcrumbs = []
     def input(self):
         keys = pygame.key.get_pressed()
@@ -155,10 +155,10 @@ class Player(pygame.sprite.Sprite):
             })
             self.last_breadcrumb_time = current_time
         # TODO fix Remove breadcrumbs
-        # current_time = pygame.time.get_ticks()
-        # for breadcrumbs in self.breadcrumbs:
-        #     if current_time - breadcrumbs['timestamp'] <= self.breadcrumb_lifetime:
-        #         self.breadcrumbs.pop(self.breadcrumbs.index(current_time))
+        self.breadcrumbs = [
+            breadcrumb for breadcrumb in self.breadcrumbs 
+            if current_time - breadcrumb['timestamp'] <= self.breadcrumb_lifetime
+        ]
         
         if self.current_state != "attack":
             self.current_sprite += 0.02
@@ -318,78 +318,80 @@ class EnemyMelee(Enemy):
         self.player = player_instance
         self.notice_range = pygame.Rect(pos[0] - detection_range, pos[1] - detection_range, detection_range * 2, detection_range * 2)
         self.range = range 
-    def track_breadcrumbs(self, dt):
-        detected_breadcrumbs = None
-        nearest_distance = float('inf')  
-        
-        # Check all breadcrumbs for the closest one, change it to the most recent one
-        for breadcrumb in self.player.breadcrumbs:
-            breadcrumb_pos = pygame.Vector2(breadcrumb['pos'])
-            distance = (self.hitbox.centerx - breadcrumb_pos.x)**2 + (self.hitbox.centery - breadcrumb_pos.y)**2
-            
-            if distance < nearest_distance:
-                detected_breadcrumbs = breadcrumb_pos
-                nearest_distance = distance
-        
-        # If a breadcrumb is found, check if there is a clear path to it
-        if detected_breadcrumbs:
-            direction = (detected_breadcrumbs - pygame.Vector2(self.rect.center)).normalize()
-            
-            # Check for LOS to the breadcrumb
-            if not self.check_line_of_sight(detected_breadcrumbs):
-                return  # If theres no line of sight, do nothing and stop moving
-            
-            # Move toward the breadcrumb if there is a clear path
-            self.rect.centerx += direction.x * self.speed * dt
-            self.rect.centery += direction.y * self.speed * dt
-            self.hitbox.centerx += direction.x * self.speed * dt
-            self.hitbox.centery += direction.y * self.speed * dt
+        self.change_direction_timer = random.randint(30, 50)
+        self.timer_counter=0
+        self.pause_counter = 0
+    
+    def pursue(self,dt):
+        dx = self.player.hitbox.centerx - self.hitbox.centerx
+        dy = self.player.hitbox.centery - self.hitbox.centery
+        distance = sqrt(dx**2 + dy**2)
 
-    def move_towards(self, direction, dt):
-        # Attempt to move the enemy towards the direction while avoiding walls 
-        next_position = self.hitbox.center + direction * self.speed * dt
-        if not self.is_colliding_with_walls(next_position):
-            self.hitbox.center = next_position
-        else:
-            # If collision occurs, attempt to adjust the movement direction to avoid wall
-            self.avoid_wall(direction, dt)
+        if distance > 0:
+            self.direction.x = dx / distance  # Normalize the direction
+            self.direction.y = dy / distance
 
-        # Align the visual rectangle with the hitbox
-        self.rect.center = (self.hitbox.centerx, self.hitbox.centery - 8)
+        # Move the enemy
+        self.hitbox.x += self.direction.x * self.speed * dt
+        self.check_collision('x')
+        self.hitbox.y += self.direction.y * self.speed * dt
+        self.check_collision('y')
+        self.rect.center = self.hitbox.center
 
-    def is_colliding_with_walls(self, next_position):
-        # Check if the enemy's next position would collide with any wall
-        future_hitbox = self.hitbox.copy()
-        future_hitbox.center = next_position
+    def check_collision(self, axis):
         for sprite in self.collision_sprites:
-            if future_hitbox.colliderect(sprite.rect):
-                return True
-        return False
-
-    def check_line_of_sight(self,target_position):
-        start_pos = pygame.Vector2(self.hitbox.center)
-        end_pos = target_position
-        
-        # Create a line from the enemy's position to the breadcrumb
-        line = pygame.math.Vector2(end_pos.x - start_pos.x, end_pos.y - start_pos.y)
-        
-        # Check for collisions along the line 
-        for sprite in self.collision_sprites:
-            if sprite.rect.colliderect(pygame.Rect(start_pos.x, start_pos.y, line.length(), 1)):  
-                return False  
-        return True
-
-    def avoid_wall(self, direction, dt):
-        pass
+            if sprite.rect.colliderect(self.hitbox):
+                if axis == 'x':
+                    if self.direction.x > 0:  # Moving right
+                        self.hitbox.right = sprite.rect.left
+                    elif self.direction.x < 0:  # Moving left
+                        self.hitbox.left = sprite.rect.right
+                    # Prevent movement after collision
+                    self.velocity.x = 0
+                elif axis == 'y':
+                    if self.direction.y > 0:  # Moving down
+                        self.hitbox.bottom = sprite.rect.top
+                    elif self.direction.y < 0:  # Moving up
+                        self.hitbox.top = sprite.rect.bottom
+                    # Prevent movement after collision
+                    self.velocity.y = 0
 
     def update(self, dt):
         super().update(dt)
         if self.notice_range.colliderect(self.player.hitbox):
-            self.track_breadcrumbs(dt)
+            self.pursue(dt)
+        else:
+            room_size = 15 * TILE_SIZE
+            self.timer_counter += 1
+            movement_vector = vector(0,0)
+            if self.timer_counter >= self.change_direction_timer:
+                wait_time=0
+                movement_vector.x += random.choice([-1, 1])
+                movement_vector.y += random.choice([-1, 1])
+                self.timer_counter = 0
+                self.is_paused = True 
+                self.direction = movement_vector
+
+
+            original_position = vector(self.hitbox.topleft)
+            
+            # Move the hitbox based on the direction
+            self.hitbox.x += self.direction.x * self.speed * dt
+            self.check_collision('x')
+            self.hitbox.y += self.direction.y * self.speed * dt
+            self.check_collision('y')
+
+            # Update velocity based on the new position
+            self.velocity = vector(self.hitbox.left - original_position.x, self.hitbox.top - original_position.y)
+
+            # Align the visual rectangle with the hitbox
+            self.rect.center = (self.hitbox.centerx, self.hitbox.centery - 8)
+   
+        self.notice_range.center = self.hitbox.center
 
 class Test_Enemy(EnemyMelee):
     def __init__(self, pos,groups,player_instance,collision_sprites,speed=200):
-        super().__init__(pos, groups, player_instance, spritesheets["test_enemy"], collision_sprites, 900,900, speed)
+        super().__init__(pos, groups, player_instance, spritesheets["test_enemy"], collision_sprites, 200,200, speed)
 
 # TODO BIG PRIORITY, Projectiles > Enemy attack > Skill
 
