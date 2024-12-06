@@ -1,4 +1,4 @@
-from settings import *
+from settings import * 
 from level import Level
 from pytmx.util_pygame import load_pygame
 from os.path import join
@@ -7,7 +7,9 @@ class Game:
     def __init__(self):
         pygame.init()
         self.display_surface = pygame.display.set_mode((WIDTH, HEIGHT))
+
         self.clock = pygame.time.Clock()
+
         self.tmx_maps = {
             101: load_pygame('./Rooms/Level 1/01.tmx'),
             102: load_pygame('./Rooms/Level 1/02.tmx'),

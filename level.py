@@ -11,7 +11,7 @@ class Level:
         # Groups for different types of objects
         self.all_sprites = pygame.sprite.Group()
         self.collision_sprites = pygame.sprite.Group()
-        
+        self.enemy_group = pygame.sprite.Group()
         self.bounding_box = pygame.sprite.Group()
         self.rooms = defaultdict(pygame.sprite.Sprite)
         self.current_room = [0, 0]
@@ -52,8 +52,7 @@ class Level:
             self.layers['decorations'].append(Sprite((x * TILE_SIZE + offset_x, y * TILE_SIZE + offset_y), surf, (self.all_sprites,)))
 
         # Set up the player (always on top of other layers)
-        self.player = Player((WIDTH // 2, HEIGHT // 2), self.all_sprites, self.collision_sprites)
-        self.player_melee = PlayerSwing(self.player.swing_range,self.player,self.all_sprites)
+        self.player = Player((WIDTH // 2, HEIGHT // 2), self.all_sprites, self.collision_sprites, self.enemy_group)
         # Load the walls layer (collidable objects)
         for x, y, surf in tmx_map.get_layer_by_name('Walls').tiles():
             self.layers['walls'].append(Sprite((x * TILE_SIZE + offset_x, y * TILE_SIZE + offset_y), surf, (self.all_sprites, self.collision_sprites)))
@@ -142,10 +141,12 @@ class Level:
                 attempts += 1
 
             if valid_position:
-                self.test.append(Enemy((x,y),self.all_sprites,self.player,self.collision_sprites))
+                self.test.append(Test_Enemy((x,y),self.all_sprites,self.player,self.collision_sprites))
                 self.spawned_enemies.append(pygame.Rect(x, y, TILE_SIZE, TILE_SIZE))
 
                 # self.all_sprites.add(enemy)
+            for i in self.test:
+                i.add(self.enemy_group)
     
     def run(self, dt):
         # Calculate the camera offset
@@ -199,11 +200,11 @@ class Level:
             pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
 
         for sprite in self.test:
-            print(sprite)
+            # print(sprite)
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
             pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
 
-        pygame.draw.rect(self.display_surface, "green", self.player_melee.rect.move(camera_offset), 2)
+        pygame.draw.rect(self.display_surface, "green", self.player.swing.rect.move(camera_offset), 2)
         pygame.draw.rect(self.display_surface, "red", self.player.hitbox.move(camera_offset), 2)  # Player hitbox
         pygame.draw.rect(self.display_surface, "blue", self.player.rect.move(camera_offset), 2)  # Player image rect
         for room_key, room in self.rooms.items():
