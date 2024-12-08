@@ -10,6 +10,7 @@ class Level:
 
         # Groups for different types of objects
         self.all_sprites = pygame.sprite.Group()
+        self.damage_sprite = pygame.sprite.Group()
         self.collision_sprites = pygame.sprite.Group()
         self.enemy_group = pygame.sprite.Group()
         self.bounding_box = pygame.sprite.Group()
@@ -44,8 +45,6 @@ class Level:
         # Load the floor layer (bg tiles, path, etc.)
         for x, y, surf in tmx_map.get_layer_by_name('Floor').tiles():
             self.layers['floor'].append(Sprite((x * TILE_SIZE + offset_x, y * TILE_SIZE + offset_y), surf, (self.all_sprites,)))
-
-
 
         # Load decorations layer
         for x, y, surf in tmx_map.get_layer_by_name('Decorations').tiles():
@@ -96,7 +95,8 @@ class Level:
         
 
     def generate_adjacent(self,current_room):
-        self.visited_room.append(current_room)
+        if current_room not in self.visited_room:
+            self.visited_room.append(str(current_room))
         offset_x = (WIDTH / 2) - (15 * TILE_SIZE / 2) + TILE_SIZE-10
         offset_y = (HEIGHT / 2) - (15 * TILE_SIZE / 2) + TILE_SIZE
         adjacent_offsets = [
@@ -118,9 +118,6 @@ class Level:
                 self.rooms[adjacent_room_key] = BoundingBox(offset_x, offset_y, 15 * TILE_SIZE, 15 * TILE_SIZE, self.bounding_box)
                 self.generate((offset_x+30, offset_y+25))
 
-                if adjacent_room_key not in self.visited_room:
-                    self.spawn_enemies(self.rooms[adjacent_room_key].rect)
-
     def spawn_enemies(self, bounding_box, max_enemies = 10):
         for _ in range(max_enemies):
             attempts = 0
@@ -141,27 +138,37 @@ class Level:
                 attempts += 1
 
             if valid_position:
-                self.test.append(Test_Enemy((x,y),self.all_sprites,self.player,self.collision_sprites))
+                self.test.append(Test_Enemy((x,y),self.all_sprites,self.player,self.collision_sprites,self.damage_sprite))
                 self.spawned_enemies.append(pygame.Rect(x, y, TILE_SIZE, TILE_SIZE))
 
                 # self.all_sprites.add(enemy)
             for i in self.test:
                 i.add(self.enemy_group)
-    
+    def spawn_borders(self,current_room):
+        border = load_pygame('./Rooms/Level 1/cover.tmx')
+        for x, y, surf in border.get_layer_by_name('Walls').tiles():
+            self.layers['walls'].append(Sprite((x*TILE_SIZE+current_room.left+30, y*TILE_SIZE+current_room.top+25), surf, (self.all_sprites, self.collision_sprites)))
     def run(self, dt):
         # Calculate the camera offset
         camera_offset = vector(WIDTH // 2 - self.player.hitbox.centerx, HEIGHT // 2 - self.player.hitbox.centery)
         
         # Update all sprites
         self.all_sprites.update(dt)
-
+        self.damage_sprite.update(dt)
         # Room boundary
         current_room_key = str(self.current_room)
         current_room_rect = self.rooms[current_room_key].rect
         moved=False
 
-        if current_room_key not in self.visited_room:
+ 
+        # print(self.visited_room)
+        if current_room_key not in self.visited_room: 
             self.generate_adjacent(self.current_room)
+            if current_room_key != str([0,0]):
+                print("PS")
+                print(self.visited_room)
+                self.spawn_enemies(self.rooms[current_room_key].rect)
+                self.spawn_borders(self.rooms[current_room_key].rect)
         if self.player.rect.left < current_room_rect.left and not moved:
             # Move left
             self.current_room[0] -= 1
@@ -178,7 +185,6 @@ class Level:
             # Move down
             self.current_room[1] += 1
             moved = True
-
 
 
         # Draw layers with camera offset
@@ -199,6 +205,9 @@ class Level:
         for enemy_rect in self.spawned_enemies: # SPawned enemies
             pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
 
+        for sprite in self.damage_sprite:
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+
         for sprite in self.test:
             # print(sprite)
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
@@ -210,3 +219,8 @@ class Level:
         pygame.draw.rect(self.display_surface, "blue", self.player.rect.move(camera_offset), 2)  # Player image rect
         for room_key, room in self.rooms.items():
             pygame.draw.rect(self.display_surface, (255, 0, 0), room.rect.move(camera_offset), 2)  # Room bounding boxes
+
+
+# TODO IMPORTANT PowerUps, Level up system AND GUI, Damage numbers
+
+# TODO not that important boss????, other stages

@@ -56,4 +56,26 @@ class PlayerSwing(pygame.sprite.Sprite):
             self.rect.topright = self.player.hitbox.center
         # self.rect.top=self.player.rect.top
 
+class DamageNumber(pygame.sprite.Sprite):
+    def __init__(self, pos, damage, groups,color=(255, 255, 255)):
+        super().__init__(groups)   
+        print("created")
+
+        self.image = pygame.font.SysFont('arial', 20, bold=True).render(str(damage), True, color)
+        self.pos = (WIDTH // 2, HEIGHT // 2)
+        self.rect = self.image.get_rect(center=pos)
+        self.pos = pygame.math.Vector2(pos) 
+        self.velocity = pygame.math.Vector2(0, -0.1)  
+        self.alpha = 255  
+        self.lifespan = 120
+    
+    
+    def update(self,dt, *args, **kwargs):
+        self.rect.y += self.velocity.y * dt
+        self.alpha -= 255 / self.lifespan  
+        if self.alpha <= 0:
+            self.kill()  
+        self.image.set_alpha(max(0, int(self.alpha)))
+
+
 

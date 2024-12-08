@@ -1,6 +1,6 @@
 from settings import *
 from math import ceil,sqrt
-from sprites import PlayerSwing
+from sprites import PlayerSwing,DamageNumber
 import random
 
 spritesheets = {
@@ -34,7 +34,7 @@ class Player(pygame.sprite.Sprite):
     defence = 20
     level = 1
     speed=500
-    attack_damage=10
+    attack_damage=10000
     rooms_cleared = 0
     def __init__(self, pos, groups, collision_sprites, enemy_group):
         super().__init__(groups)
@@ -70,9 +70,7 @@ class Player(pygame.sprite.Sprite):
         self.collision_sprites = collision_sprites
         self.enemy_group = enemy_group
 
-        self.breadcrumb_interval = 100 # Time interval for leaving a breadcrumb (in milliseconds)
-        self.breadcrumb_lifetime = 400  # Time to keep a breadcrumb (in milliseconds)
-        self.breadcrumbs = []
+
     def input(self):
         keys = pygame.key.get_pressed()
         keybinds=[
@@ -94,14 +92,14 @@ class Player(pygame.sprite.Sprite):
             input_vector.y += 1
             self.is_moving = True
         if keys[pygame.K_x]:
-            self.current_state = "attack" # TODO BRRRRRRRRRRRRRRRRRRRRRRRR
-            self.attack()
+            self.current_state = "attack" 
         if keys[pygame.K_LALT]:
             pass # Lock direction
         if not any(keys[key] for key in keybinds):
             self.is_moving = False
         self.direction = input_vector.normalize() if input_vector else input_vector
     def attack(self):
+        print("Attacked")
         enemies_hit = pygame.sprite.groupcollide(self.enemy_group, self.attack_group, False, False)
         for enemy in enemies_hit:
             print(enemy)
@@ -146,19 +144,8 @@ class Player(pygame.sprite.Sprite):
                     self.velocity.y = 0
     
     def update(self, dt):
+        print(f"palyerdt:{dt}")
         current_time = pygame.time.get_ticks()
-        if current_time - self.last_breadcrumb_time >= self.breadcrumb_interval:
-            # Create a breadcrumb and add it to the list
-            self.breadcrumbs.append({
-                'pos': self.hitbox.center,  # Store the position of the breadcrumb
-                'timestamp': current_time
-            })
-            self.last_breadcrumb_time = current_time
-        # TODO fix Remove breadcrumbs
-        self.breadcrumbs = [
-            breadcrumb for breadcrumb in self.breadcrumbs 
-            if current_time - breadcrumb['timestamp'] <= self.breadcrumb_lifetime
-        ]
         
         if self.current_state != "attack":
             self.current_sprite += 0.02
@@ -172,6 +159,7 @@ class Player(pygame.sprite.Sprite):
             self.current_sprite += self.attack_speed
             sprite_list = self.spritesheets[f"attack-{self.attack_var}"]
             if self.current_sprite >= len(sprite_list):
+                self.attack()
                 self.current_sprite = 0
                 self.current_state = "move" if self.is_moving else "idle"
                 self.attack_var = random.randint(1,2)
@@ -189,12 +177,14 @@ class Player(pygame.sprite.Sprite):
     # TODO Dash (I frames)
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self,pos, groups, player_instance, spritesheet,collision_sprites, speed = 2):
-        super().__init__(groups)
+    def __init__(self,pos, groups, player_instance, spritesheet,collision_sprites,damage_sprite, speed = 2):
+        super().__init__(groups) 
+        self.damage_sprite=damage_sprite
         self.current_frame = 0
         self.animation_speed = 0.01
         self.spritesheet=spritesheet
         self.player = player_instance
+        self.status=1
 
         self.frames = [get_enemy_frames(self.spritesheet,i) for i in range(4)]
         self.image = self.frames[int(self.current_frame)]
@@ -240,14 +230,20 @@ class Enemy(pygame.sprite.Sprite):
             self.flipped = True
         if self.rect.centerx < self.player.hitbox.centerx:
             self.flipped = False
-        
+
         self.image = pygame.transform.flip(cur_frame, True, False) if self.flipped else cur_frame
 
     def take_damage(self, damage): # TODO
-        print("DAmage")
+        print("Damage")
         self.HP -= damage
+        DamageNumber(self.rect.center, damage, self.damage_sprite) # Use the center of the enemy rect for the position
+        
         if self.HP <= 0:
             print("Dead")
+            self.dead()
+    def dead(self):
+        self.status=0
+        self.kill()
 
 class EnemyRangedMove(Enemy):  # TODO Code moveement
     def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites, speed=2):
@@ -327,12 +323,13 @@ class EnemyMelee(Enemy):
         dy = self.player.hitbox.centery - self.hitbox.centery
         distance = sqrt(dx**2 + dy**2)
 
+
         if distance > 0:
-            self.direction.x = dx / distance  # Normalize the direction
+            self.direction.x = dx / distance 
             self.direction.y = dy / distance
 
         # Move the enemy
-        self.hitbox.x += self.direction.x * self.speed * dt
+        self.hitbox.x += self.direction.x * self.speed * dt # DT scaling is messed up fsr
         self.check_collision('x')
         self.hitbox.y += self.direction.y * self.speed * dt
         self.check_collision('y')
@@ -358,6 +355,7 @@ class EnemyMelee(Enemy):
 
     def update(self, dt):
         super().update(dt)
+        print(f"Enemy dt:{dt}")
         if self.notice_range.colliderect(self.player.hitbox):
             self.pursue(dt)
         else:
@@ -390,12 +388,12 @@ class EnemyMelee(Enemy):
         self.notice_range.center = self.hitbox.center
 
 class Test_Enemy(EnemyMelee):
-    def __init__(self, pos,groups,player_instance,collision_sprites,speed=200):
+    def __init__(self, pos,groups,player_instance,collision_sprites,speed=500):
         super().__init__(pos, groups, player_instance, spritesheets["test_enemy"], collision_sprites, 200,200, speed)
 
-# TODO BIG PRIORITY, Projectiles > Enemy attack > Skill
+# TODO BIG PRIORITY, Projectiles > Enemy attack > skill
 
-# TODO enemy types
+# TODO Player ONLY ATTACK ONCE
 
 # TODO diff enemies
 
