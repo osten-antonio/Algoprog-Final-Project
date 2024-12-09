@@ -284,9 +284,9 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
         original_position = vector(self.hitbox.topleft)
         
         # Move the hitbox based on the direction
-        self.hitbox.x += self.direction.x * self.speed * dt
+        self.hitbox.x += self.direction.x * self.speed 
         self.check_collision('x')
-        self.hitbox.y += self.direction.y * self.speed * dt
+        self.hitbox.y += self.direction.y * self.speed 
         self.check_collision('y')
 
         # Update velocity based on the new position
@@ -329,9 +329,9 @@ class EnemyMelee(Enemy):
             self.direction.y = dy / distance
 
         # Move the enemy
-        self.hitbox.x += self.direction.x * self.speed * dt # DT scaling is messed up fsr
+        self.hitbox.x += self.direction.x * self.speed  # DT scaling is messed up fsr
         self.check_collision('x')
-        self.hitbox.y += self.direction.y * self.speed * dt
+        self.hitbox.y += self.direction.y * self.speed 
         self.check_collision('y')
         self.rect.center = self.hitbox.center
 
@@ -374,9 +374,9 @@ class EnemyMelee(Enemy):
             original_position = vector(self.hitbox.topleft)
             
             # Move the hitbox based on the direction
-            self.hitbox.x += self.direction.x * self.speed * dt
+            self.hitbox.x += self.direction.x * self.speed 
             self.check_collision('x')
-            self.hitbox.y += self.direction.y * self.speed * dt
+            self.hitbox.y += self.direction.y * self.speed 
             self.check_collision('y')
 
             # Update velocity based on the new position

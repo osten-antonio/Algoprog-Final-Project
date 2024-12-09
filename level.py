@@ -124,9 +124,9 @@ class Level:
             valid_position = False
 
             while not valid_position and attempts < 100:  # Limit attempts to prevent infinite loops
-                x = random.randint(int(bounding_box.left), int(bounding_box.right) - TILE_SIZE)
-                y = random.randint(int(bounding_box.top), int(bounding_box.bottom) - TILE_SIZE)
-                
+                x = random.randint(int(bounding_box.left)+100, int(bounding_box.right) - TILE_SIZE-100) 
+                y = random.randint(int(bounding_box.top)+100, int(bounding_box.bottom) - TILE_SIZE-100) 
+                # ^ The 100s are used to prevene the enemy from spawning outside the room
                 # Temporary rect for collision check
                 temp_rect = pygame.Rect(x, y, TILE_SIZE-20, TILE_SIZE-20)
 
@@ -205,8 +205,7 @@ class Level:
         for enemy_rect in self.spawned_enemies: # SPawned enemies
             pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
 
-        for sprite in self.damage_sprite:
-            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+
 
         for sprite in self.test:
             # print(sprite)
@@ -219,6 +218,8 @@ class Level:
         pygame.draw.rect(self.display_surface, "blue", self.player.rect.move(camera_offset), 2)  # Player image rect
         for room_key, room in self.rooms.items():
             pygame.draw.rect(self.display_surface, (255, 0, 0), room.rect.move(camera_offset), 2)  # Room bounding boxes
+        for sprite in self.damage_sprite:
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
 
 
 # TODO IMPORTANT PowerUps, Level up system AND GUI, Damage numbers
