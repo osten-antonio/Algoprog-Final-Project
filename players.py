@@ -144,9 +144,7 @@ class Player(pygame.sprite.Sprite):
                     self.velocity.y = 0
     
     def update(self, dt):
-        print(f"palyerdt:{dt}")
-        current_time = pygame.time.get_ticks()
-        
+
         if self.current_state != "attack":
             self.current_sprite += 0.02
             # Animation state based on movement
@@ -239,9 +237,11 @@ class Enemy(pygame.sprite.Sprite):
         DamageNumber(self.rect.center, damage, self.damage_sprite) # Use the center of the enemy rect for the position
         
         if self.HP <= 0:
+            self.image=None
             print("Dead")
             self.dead()
     def dead(self):
+        
         self.status=0
         self.kill()
 
@@ -355,7 +355,6 @@ class EnemyMelee(Enemy):
 
     def update(self, dt):
         super().update(dt)
-        print(f"Enemy dt:{dt}")
         if self.notice_range.colliderect(self.player.hitbox):
             self.pursue(dt)
         else:

@@ -155,18 +155,18 @@ class Level:
         # Update all sprites
         self.all_sprites.update(dt)
         self.damage_sprite.update(dt)
+        self.enemy_group.update(dt)
+
         # Room boundary
         current_room_key = str(self.current_room)
         current_room_rect = self.rooms[current_room_key].rect
         moved=False
-
  
         # print(self.visited_room)
         if current_room_key not in self.visited_room: 
             self.generate_adjacent(self.current_room)
             if current_room_key != str([0,0]):
-                print("PS")
-                print(self.visited_room)
+                self.player.hitbox.center+= self.player.direction*150 
                 self.spawn_enemies(self.rooms[current_room_key].rect)
                 self.spawn_borders(self.rooms[current_room_key].rect)
         if self.player.rect.left < current_room_rect.left and not moved:
@@ -202,7 +202,7 @@ class Level:
         for sprite in self.layers['decorations2']:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
 
-        for enemy_rect in self.spawned_enemies: # SPawned enemies
+        for enemy_rect in self.spawned_enemies: # Spawned enemies
             pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
 
 
