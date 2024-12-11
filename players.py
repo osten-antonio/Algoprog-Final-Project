@@ -237,11 +237,11 @@ class Enemy(pygame.sprite.Sprite):
         DamageNumber(self.rect.center, damage, self.damage_sprite) # Use the center of the enemy rect for the position
         
         if self.HP <= 0:
-            self.image=None
+
             print("Dead")
             self.dead()
     def dead(self):
-        
+
         self.status=0
         self.kill()
 

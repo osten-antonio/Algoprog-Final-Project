@@ -14,6 +14,7 @@ class Level:
         self.collision_sprites = pygame.sprite.Group()
         self.enemy_group = pygame.sprite.Group()
         self.bounding_box = pygame.sprite.Group()
+        self.spawn_borders_group = pygame.sprite.Group()
         self.rooms = defaultdict(pygame.sprite.Sprite)
         self.current_room = [0, 0]
 
@@ -119,6 +120,7 @@ class Level:
                 self.generate((offset_x+30, offset_y+25))
 
     def spawn_enemies(self, bounding_box, max_enemies = 10):
+
         for _ in range(max_enemies):
             attempts = 0
             valid_position = False
@@ -144,18 +146,22 @@ class Level:
                 # self.all_sprites.add(enemy)
             for i in self.test:
                 i.add(self.enemy_group)
+
     def spawn_borders(self,current_room):
         border = load_pygame('./Rooms/Level 1/cover.tmx')
         for x, y, surf in border.get_layer_by_name('Walls').tiles():
-            self.layers['walls'].append(Sprite((x*TILE_SIZE+current_room.left+30, y*TILE_SIZE+current_room.top+25), surf, (self.all_sprites, self.collision_sprites)))
+            self.layers['walls'].append(Sprite((x*TILE_SIZE+current_room.left+30, y*TILE_SIZE+current_room.top+25), surf, (self.all_sprites, self.collision_sprites,self.spawn_borders_group)))
+
+
     def run(self, dt):
+
         # Calculate the camera offset
         camera_offset = vector(WIDTH // 2 - self.player.hitbox.centerx, HEIGHT // 2 - self.player.hitbox.centery)
-        
+        self.display_surface.fill((0, 0, 0)) 
         # Update all sprites
         self.all_sprites.update(dt)
         self.damage_sprite.update(dt)
-        self.enemy_group.update(dt)
+
 
         # Room boundary
         current_room_key = str(self.current_room)
@@ -169,6 +175,7 @@ class Level:
                 self.player.hitbox.center+= self.player.direction*150 
                 self.spawn_enemies(self.rooms[current_room_key].rect)
                 self.spawn_borders(self.rooms[current_room_key].rect)
+
         if self.player.rect.left < current_room_rect.left and not moved:
             # Move left
             self.current_room[0] -= 1
@@ -185,7 +192,6 @@ class Level:
             # Move down
             self.current_room[1] += 1
             moved = True
-
 
         # Draw layers with camera offset
         for sprite in self.layers['water']:
@@ -205,10 +211,15 @@ class Level:
         for enemy_rect in self.spawned_enemies: # Spawned enemies
             pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
 
+        if not self.enemy_group: # Checks if there is enemy remaining
+            for wall in self.spawn_borders_group:
+                wall.kill()
+                self.spawned_enemies = []
 
+        # print(self.spawn_borders_group)
+        # print(self.enemy_group) 
 
-        for sprite in self.test:
-            # print(sprite)
+        for sprite in self.enemy_group:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
             pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
             pygame.draw.rect(self.display_surface, "red", sprite.notice_range.move(camera_offset), 2)
@@ -221,7 +232,7 @@ class Level:
         for sprite in self.damage_sprite:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
 
-
+    
 # TODO IMPORTANT PowerUps, Level up system AND GUI, Damage numbers
 
 # TODO not that important boss????, other stages
