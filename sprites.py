@@ -77,35 +77,45 @@ class DamageNumber(pygame.sprite.Sprite):
             self.kill()  
         self.image.set_alpha(max(0, int(self.alpha)))
 
-class projectileEnemiesBasic(pygame.sprite.Sprite): # TODO test this
-    def __init__(self, player_instance, damage, pos, angle, groups, spritesheet , collision_sprite, speed, size):
+class projectile(pygame.sprite.Sprite): # TODO test this
+    def __init__(self, player_instance, damage, pos, angle, 
+                 groups, spritesheet , collision_sprite, speed,
+                   width, height, frames, size):
         super().__init__(groups)
         self.player = player_instance
         self.damage = damage # PLS INPUT USING DAMAGE CALCULATION LATER
         self.spritesheet  = spritesheet
         self.speed = speed
         self.collision_sprite = collision_sprite
-        self.frames = [get_frames(self.spritesheet,i,16,16,size) for i in range(4)]
+        self.current_frame = 0
+        self.frames = [get_frames(self.spritesheet,i, width,height,size) for i in range(frames)]
         self.image = self.frames[int(self.current_frame)]
-        # TODO Rotate image based on rectangle
+        self.image = pygame.transform.rotate(self.image,angle)
         self.rect = self.image.get_frect(topleft = pos)
         self.hitbox=pygame.FRect((self.rect.topleft[0]+5,self.rect.topleft[1]+5),(10,10))
 
         self.pos = pos
         self.angle = angle
         self.direction = vector(cos(angle),sin(angle))
+    def update(self, dt, *args, **kwargs):
+        # Ensure direction is a pygame vector
+        if not isinstance(self.direction, pygame.math.Vector2):
+            self.direction = pygame.math.Vector2(self.direction)
 
-    def update(self, *args, **kwargs):
-        self.hitbox+=self.direction*self.speed
+        # Move the projectile based on its direction and speed (scale by dt for frame-rate independence)
+        movement = self.direction * self.speed * dt
+        self.hitbox.center += movement
         self.rect.center = self.hitbox.center
-        
-        # Remove the projectile if it collides with a collision_sprite AKA walls
-        pygame.sprite.spritecollide(self.collision_sprite, self, True)
 
+        # Check for collision with walls or other obstacles in the collision group
+        for sprite in self.collision_sprite:
+            if self.hitbox.colliderect(sprite.rect):
+                self.kill()  # Remove the projectile on collision
+
+        # Check for collision with the player
         if self.hitbox.colliderect(self.player.hitbox):
-            self.player.HP -= self.damage 
-            self.kill()
-
+            # self.player.HP -= self.damage  # Decrease player HP on hit
+            self.kill()  # Remove the projectile
 
 
 

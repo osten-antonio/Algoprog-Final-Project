@@ -1,6 +1,6 @@
 from settings import *
 from math import ceil,sqrt,atan2
-from sprites import *
+import sprites as sp
 import random
 
 spritesheets = {
@@ -13,7 +13,10 @@ spritesheets = {
         "hurt": pygame.image.load("./Assets/Soldier-Hurt.png"),
         "death": pygame.image.load("./Assets/Soldier-Death.png"),
     },
-    "test_enemy": pygame.image.load("./Assets/First/BrittleArcher.png")
+    "test_enemy": pygame.image.load("./Assets/First/BrittleArcher.png"),
+    "projectile":{
+        "arrow":pygame.image.load("./Assets/Arrow.png")
+    }
 }
 
 def get_frames(sheet, nFrame, width, height, scale):
@@ -60,7 +63,7 @@ class Player(pygame.sprite.Sprite):
         
         self.flipped=False
         self.attack_var=1
-        self.swing = PlayerSwing(self.swing_range, self, self.groups())
+        self.swing = sp.PlayerSwing(self.swing_range, self, self.groups())
         self.attack_group = pygame.sprite.Group()
         self.swing.add(self.attack_group)
         self.collision_sprites = collision_sprites
@@ -174,7 +177,6 @@ class Enemy(pygame.sprite.Sprite):
         self.animation_speed = 0.01
         self.spritesheet=spritesheet
         self.player = player_instance
-        self.status=1
 
         self.frames = [get_frames(self.spritesheet,i,16,16,2.7) for i in range(4)]
         self.image = self.frames[int(self.current_frame)]
@@ -191,7 +193,7 @@ class Enemy(pygame.sprite.Sprite):
         self.ATK = 10
         self.damage = self.ATK # FIX LATER
         self.DEF = 0
-        self.attack_speed = 100
+        self.attack_speed = 5
 
     def check_collision(self, axis):
         self.collided=False
@@ -227,7 +229,7 @@ class Enemy(pygame.sprite.Sprite):
 
     def take_damage(self, damage): # TODO
         self.HP -= damage
-        DamageNumber(self.rect.center, damage, self.damage_sprite) # Use the center of the enemy rect for the position
+        sp.DamageNumber(self.rect.center, damage, self.damage_sprite) # Use the center of the enemy rect for the position
         
         if self.HP <= 0:
             self.dead()
@@ -241,14 +243,25 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
         super().__init__(pos, groups, player_instance, spritesheet, collision_sprites, speed)
         self.spritesheet=spritesheet
         self.player = player_instance
-        self.attack_range = pygame.Rect(pos[0] - range, pos[1] - range, range * 6, range * 6)
         self.is_paused = False
         self.change_direction_timer = random.randint(30, 50)
         self.collision_sprites = collision_sprites
-        self.timer_counter=0
         self.pause_counter = 0
         self.pause_duration = random.randint(60,80)
  
+        # Default ranged enemy value
+        self.attack_range = pygame.Rect(pos[0] - range, pos[1] - range, range * 6, range * 6)
+        self.timer_counter=0
+        self.attack_timer=0
+        self.projectile_speed = 500
+        self.projectile_size=1
+        # Projectile sprite sheet
+        self.projectile_spritesheet=spritesheets["projectile"]["arrow"]
+        self.projectile_width = 32
+        self.projectile_height = 32
+        self.projectile_frames = 1
+
+        
     def check_collision(self, axis):
         super().check_collision(axis)
         if self.collided:
@@ -258,7 +271,7 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
             self.direction = vector(random.choice([-100, 100]), random.choice([-100, 100]))
         return self.collided
 
-    def move(self):
+    def move(self,dt):
         if self.is_paused: return
         self.timer_counter += 1
         movement_vector = vector(0,0)
@@ -273,9 +286,9 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
         original_position = vector(self.hitbox.topleft)
         
         # Move the hitbox based on the direction
-        self.hitbox.x += self.direction.x * self.speed 
+        self.hitbox.x += self.direction.x * self.speed  * dt 
         self.check_collision('x')
-        self.hitbox.y += self.direction.y * self.speed 
+        self.hitbox.y += self.direction.y * self.speed * dt
         self.check_collision('y')
 
         # Update velocity based on the new position
@@ -299,14 +312,20 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
         self.move(dt)
 
     def attack(self):
+        # Angle needs to be here so tha tit updates constantly
+        self.angle=atan2(self.player.hitbox.centery-self.rect.centery,
+                                    self.player.hitbox.centerx-self.rect.centerx)
         # Immediately attakcs
-        projectileEnemiesBasic(self.player,self.damage, self.rect.center,atan2(self.rect.center.y-self.player.center.y,self.rect.center.x-self.rect.center.x),
-                              self.groups,)
+        # sp.projectileEnemiesBasic(self.player,self.damage, self.rect.center,atan2(self.player.hitbox.centery-self.rect.centery,self.player.hitbox.centerx-self.rect.centery),
+        #                       self.groups(),spritesheets["projectile"]["arrow"],self.collision_sprites,100,1)
         # then wait to attack again i think
-        attack_timer+=0.1
-        if attack_timer > self.attack_speed:
-            projectileEnemiesBasic(self.player,self.damage, self.rect.center,atan2(self.rect.center.y-self.player.center.y,self.rect.center.x-self.rect.center.x),
-                              self.groups,)
+        self.attack_timer+=0.1
+        print(self.attack_timer)
+        if self.attack_timer > self.attack_speed:
+            self.attack_timer=0
+            sp.projectile(self.player,self.damage,self.rect.center,self.angle,self.groups(),self.projectile_spritesheet,
+                          self.collision_sprites,self.projectile_speed,self.projectile_width,self.projectile_height,
+                          self.projectile_height,self.projectile_size)
 
 class EnemyMelee(Enemy):
     def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites, range, detection_range, speed=200):
@@ -322,7 +341,6 @@ class EnemyMelee(Enemy):
         dx = self.player.hitbox.centerx - self.hitbox.centerx
         dy = self.player.hitbox.centery - self.hitbox.centery
         distance = sqrt(dx**2 + dy**2)
-
 
         if distance > 0:
             self.direction.x = dx / distance 
@@ -385,9 +403,9 @@ class EnemyMelee(Enemy):
    
         self.notice_range.center = self.hitbox.center
 
-class Test_Enemy(EnemyMelee):
-    def __init__(self, pos,groups,player_instance,collision_sprites,speed=500):
-        super().__init__(pos, groups, player_instance, spritesheets["test_enemy"], collision_sprites, 200,200, speed)
+class Test_Enemy(EnemyRangedMove):
+    def __init__(self, pos,groups,player_instance ,collision_sprites,speed=500):
+        super().__init__(pos, groups, player_instance, spritesheets["test_enemy"], collision_sprites, 200, speed)
 
 # TODO BIG PRIORITY, Projectiles > Enemy attack > skill
 
