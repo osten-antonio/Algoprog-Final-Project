@@ -1,6 +1,6 @@
 from settings import *
-from math import ceil,sqrt
-from sprites import PlayerSwing,DamageNumber
+from math import ceil,sqrt,atan2
+from sprites import *
 import random
 
 spritesheets = {
@@ -22,12 +22,8 @@ def get_frames(sheet, nFrame, width, height, scale):
     frame = pygame.transform.scale(frame, (int(width * scale), int(height * scale)))
     return frame
 
-def get_enemy_frames(sheet, nframe, width =16, height = 16, scale = 2.7):
-    frame = pygame.Surface((width, height), pygame.SRCALPHA).convert_alpha()
-    frame.blit(sheet, (0, 0), (nframe * width, 0, width, height))
-    frame = pygame.transform.scale(frame, (int(width * scale), int(height * scale)))
-    return frame
-class Player(pygame.sprite.Sprite):
+class Player(pygame.sprite.Sprite): 
+    # TODO Take damage function (check if projectile collides (ranged), and if enemy swing range collide (swing range is new rect))
     swing_range = 50
     health = 100
     attack_speed=0.03
@@ -99,14 +95,10 @@ class Player(pygame.sprite.Sprite):
             self.is_moving = False
         self.direction = input_vector.normalize() if input_vector else input_vector
     def attack(self):
-        print("Attacked")
         enemies_hit = pygame.sprite.groupcollide(self.enemy_group, self.attack_group, False, False)
         for enemy in enemies_hit:
-            print(enemy)
             if isinstance(enemy, Enemy):
-                print("YES")
                 if self.swing.rect.colliderect(enemy.hitbox):
-                    print("AGLKJAHGLIKJAG")
                     enemy.take_damage(self.attack_damage)
 
     def move(self, dt):
@@ -184,7 +176,7 @@ class Enemy(pygame.sprite.Sprite):
         self.player = player_instance
         self.status=1
 
-        self.frames = [get_enemy_frames(self.spritesheet,i) for i in range(4)]
+        self.frames = [get_frames(self.spritesheet,i,16,16,2.7) for i in range(4)]
         self.image = self.frames[int(self.current_frame)]
         self.rect = self.image.get_frect(topleft = pos)
         self.hitbox=pygame.FRect((self.rect.topleft[0]+10,self.rect.topleft[1]+10),(16,32))
@@ -197,7 +189,9 @@ class Enemy(pygame.sprite.Sprite):
         # Default value
         self.HP = 100 
         self.ATK = 10
+        self.damage = self.ATK # FIX LATER
         self.DEF = 0
+        self.attack_speed = 100
 
     def check_collision(self, axis):
         self.collided=False
@@ -232,13 +226,10 @@ class Enemy(pygame.sprite.Sprite):
         self.image = pygame.transform.flip(cur_frame, True, False) if self.flipped else cur_frame
 
     def take_damage(self, damage): # TODO
-        print("Damage")
         self.HP -= damage
         DamageNumber(self.rect.center, damage, self.damage_sprite) # Use the center of the enemy rect for the position
         
         if self.HP <= 0:
-
-            print("Dead")
             self.dead()
     def dead(self):
 
@@ -246,11 +237,11 @@ class Enemy(pygame.sprite.Sprite):
         self.kill()
 
 class EnemyRangedMove(Enemy):  # TODO Code moveement
-    def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites, speed=2):
+    def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites,range, speed=2):
         super().__init__(pos, groups, player_instance, spritesheet, collision_sprites, speed)
         self.spritesheet=spritesheet
         self.player = player_instance
-
+        self.attack_range = pygame.Rect(pos[0] - range, pos[1] - range, range * 6, range * 6)
         self.is_paused = False
         self.change_direction_timer = random.randint(30, 50)
         self.collision_sprites = collision_sprites
@@ -267,13 +258,11 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
             self.direction = vector(random.choice([-100, 100]), random.choice([-100, 100]))
         return self.collided
 
-    def move(self,dt):
+    def move(self):
         if self.is_paused: return
-        room_size = 15 * TILE_SIZE
         self.timer_counter += 1
         movement_vector = vector(0,0)
         if self.timer_counter >= self.change_direction_timer:
-            wait_time=0
             movement_vector.x += random.choice([-20, 20])
             movement_vector.y += random.choice([-20, 20])
             self.timer_counter = 0
@@ -304,9 +293,20 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
                 self.is_paused = False
                 self.collided = False  # Reset collided state
                 self.pause_counter = 0
-
-
+        if self.player.hitbox.colliderect(self.attack_range): 
+            # TODO Cast a line to see if the player is visible or not
+            self.attack()
         self.move(dt)
+
+    def attack(self):
+        # Immediately attakcs
+        projectileEnemiesBasic(self.player,self.damage, self.rect.center,atan2(self.rect.center.y-self.player.center.y,self.rect.center.x-self.rect.center.x),
+                              self.groups,)
+        # then wait to attack again i think
+        attack_timer+=0.1
+        if attack_timer > self.attack_speed:
+            projectileEnemiesBasic(self.player,self.damage, self.rect.center,atan2(self.rect.center.y-self.player.center.y,self.rect.center.x-self.rect.center.x),
+                              self.groups,)
 
 class EnemyMelee(Enemy):
     def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites, range, detection_range, speed=200):
@@ -329,7 +329,7 @@ class EnemyMelee(Enemy):
             self.direction.y = dy / distance
 
         # Move the enemy
-        self.hitbox.x += self.direction.x * self.speed  # DT scaling is messed up fsr
+        self.hitbox.x += self.direction.x * self.speed # DT scaling is messed up fsr
         self.check_collision('x')
         self.hitbox.y += self.direction.y * self.speed 
         self.check_collision('y')
@@ -358,11 +358,10 @@ class EnemyMelee(Enemy):
         if self.notice_range.colliderect(self.player.hitbox):
             self.pursue(dt)
         else:
-            room_size = 15 * TILE_SIZE
             self.timer_counter += 1
             movement_vector = vector(0,0)
             if self.timer_counter >= self.change_direction_timer:
-                wait_time=0
+
                 movement_vector.x += random.choice([-1, 1])
                 movement_vector.y += random.choice([-1, 1])
                 self.timer_counter = 0

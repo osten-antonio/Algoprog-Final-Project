@@ -22,8 +22,8 @@ class Level:
 
         self.room_size = (15 * TILE_SIZE, 15 * TILE_SIZE)
         self.setup(tmx_map)
-        self.spawned_enemies = []
-        self.test=[]
+        self.spawned_enemies_pos = []
+        self.spawned_enemies=[]
     def setup(self, tmx_map):
 
         self.layers = {
@@ -32,6 +32,7 @@ class Level:
             'walls': [],
             'decorations': [],
             'decorations2': [],
+            'spawn_border':[]
         }
         offset_x = (WIDTH / 2) - (tmx_map.width * TILE_SIZE / 2) + TILE_SIZE-10
         offset_y = (HEIGHT / 2) - (tmx_map.height * TILE_SIZE / 2) + TILE_SIZE
@@ -120,7 +121,7 @@ class Level:
                 self.generate((offset_x+30, offset_y+25))
 
     def spawn_enemies(self, bounding_box, max_enemies = 10):
-
+        print(bounding_box)
         for _ in range(max_enemies):
             attempts = 0
             valid_position = False
@@ -140,21 +141,19 @@ class Level:
                 attempts += 1
 
             if valid_position:
-                self.test.append(Test_Enemy((x,y),self.all_sprites,self.player,self.collision_sprites,self.damage_sprite))
-                self.spawned_enemies.append(pygame.Rect(x, y, TILE_SIZE, TILE_SIZE))
+                self.spawned_enemies.append(Test_Enemy((x,y),self.all_sprites,self.player,self.collision_sprites,self.damage_sprite))
+                self.spawned_enemies_pos.append(pygame.Rect(x, y, TILE_SIZE, TILE_SIZE))
 
                 # self.all_sprites.add(enemy)
-            for i in self.test:
+            for i in self.spawned_enemies:
                 i.add(self.enemy_group)
 
     def spawn_borders(self,current_room):
         border = load_pygame('./Rooms/Level 1/cover.tmx')
         for x, y, surf in border.get_layer_by_name('Walls').tiles():
-            self.layers['walls'].append(Sprite((x*TILE_SIZE+current_room.left+30, y*TILE_SIZE+current_room.top+25), surf, (self.all_sprites, self.collision_sprites,self.spawn_borders_group)))
-
+            self.layers['spawn_border'].append(Sprite((x*TILE_SIZE+current_room.left+30, y*TILE_SIZE+current_room.top+25), surf, (self.all_sprites, self.collision_sprites,self.spawn_borders_group)))
 
     def run(self, dt):
-
         # Calculate the camera offset
         camera_offset = vector(WIDTH // 2 - self.player.hitbox.centerx, HEIGHT // 2 - self.player.hitbox.centery)
         self.display_surface.fill((0, 0, 0)) 
@@ -208,13 +207,18 @@ class Level:
         for sprite in self.layers['decorations2']:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
 
-        for enemy_rect in self.spawned_enemies: # Spawned enemies
+        for sprite in self.layers['spawn_border']:
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+
+        for enemy_rect in self.spawned_enemies_pos: # Spawned enemies
             pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
 
         if not self.enemy_group: # Checks if there is enemy remaining
             for wall in self.spawn_borders_group:
                 wall.kill()
+                self.spawned_enemies_pos = []
                 self.spawned_enemies = []
+                self.layers['spawn_border'] = []
 
         # print(self.spawn_borders_group)
         # print(self.enemy_group) 
@@ -235,4 +239,3 @@ class Level:
     
 # TODO IMPORTANT PowerUps, Level up system AND GUI, Damage numbers
 
-# TODO not that important boss????, other stages

@@ -1,5 +1,6 @@
 from settings import *
 from math import *
+from players import get_frames
 
 class Sprite(pygame.sprite.Sprite):
     def __init__(self, pos, surf, groups):
@@ -59,7 +60,6 @@ class PlayerSwing(pygame.sprite.Sprite):
 class DamageNumber(pygame.sprite.Sprite):
     def __init__(self, pos, damage, groups,color=(255, 255, 255)):
         super().__init__(groups)   
-        print("created")
 
         self.image = pygame.font.SysFont('arial', 20, bold=True).render(str(damage), True, color)
         self.pos = (WIDTH // 2, HEIGHT // 2)
@@ -76,6 +76,43 @@ class DamageNumber(pygame.sprite.Sprite):
         if self.alpha <= 0:
             self.kill()  
         self.image.set_alpha(max(0, int(self.alpha)))
+
+class projectileEnemiesBasic(pygame.sprite.Sprite): # TODO test this
+    def __init__(self, player_instance, damage, pos, angle, groups, spritesheet , collision_sprite, speed, size):
+        super().__init__(groups)
+        self.player = player_instance
+        self.damage = damage # PLS INPUT USING DAMAGE CALCULATION LATER
+        self.spritesheet  = spritesheet
+        self.speed = speed
+        self.collision_sprite = collision_sprite
+        self.frames = [get_frames(self.spritesheet,i,16,16,size) for i in range(4)]
+        self.image = self.frames[int(self.current_frame)]
+        # TODO Rotate image based on rectangle
+        self.rect = self.image.get_frect(topleft = pos)
+        self.hitbox=pygame.FRect((self.rect.topleft[0]+5,self.rect.topleft[1]+5),(10,10))
+
+        self.pos = pos
+        self.angle = angle
+        self.direction = vector(cos(angle),sin(angle))
+
+    def update(self, *args, **kwargs):
+        self.hitbox+=self.direction*self.speed
+        self.rect.center = self.hitbox.center
+        
+        # Remove the projectile if it collides with a collision_sprite AKA walls
+        pygame.sprite.spritecollide(self.collision_sprite, self, True)
+
+        if self.hitbox.colliderect(self.player.hitbox):
+            self.player.HP -= self.damage 
+            self.kill()
+
+
+
+
+        
+    
+    
+
 
 
 
