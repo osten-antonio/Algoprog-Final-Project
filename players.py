@@ -1,7 +1,9 @@
 from settings import *
-from math import ceil,sqrt,atan2
+from math import degrees,sqrt,atan2
 import sprites as sp
 import random
+import time
+
 
 spritesheets = {
     "player": {
@@ -29,15 +31,15 @@ class Player(pygame.sprite.Sprite):
     # TODO Take damage function (check if projectile collides (ranged), and if enemy swing range collide (swing range is new rect))
     swing_range = 50
     health = 100
+    max_health = 100
     attack_speed=0.03
     defence = 20
     level = 1
     speed=500
     attack_damage=10000
     rooms_cleared = 0
-    def __init__(self, pos, groups, collision_sprites, enemy_group):
+    def __init__(self, pos, groups, collision_sprites, enemy_group, player_skill):
         super().__init__(groups)
-        self.last_breadcrumb_time = pygame.time.get_ticks() # https://youtu.be/OtSZMeHr_S8?si=HzfZ7XqSqTrw6kzu
         self.spritesheets={
             "idle": [get_frames(spritesheets["player"]["idle"], i, 15, 19, 2.7) for i in range(6)],
             "move": [get_frames(spritesheets["player"]["move"], i,  15, 19, 2.7) for i in range(8)],
@@ -46,6 +48,7 @@ class Player(pygame.sprite.Sprite):
             "skill": [get_frames(spritesheets["player"]["attack-3"], i,  15, 19, 2.7) for i in range(6)],
             "hurt": [get_frames(spritesheets["player"]["hurt"], i,  15, 19, 2.7) for i in range(4)],
         }
+        self.player_skill= player_skill
         self.current_sprite = 0
         self.current_state = "idle"
         self.image = self.spritesheets[self.current_state][int(self.current_sprite)]
@@ -53,7 +56,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_frect(topleft = pos)
         self.rect.height=16*2.8
         self.rect.width=16*2.8
-    
+
         self.hitbox=pygame.FRect((pos[0]-2,pos[1]+8),(28,33))
         self.is_moving=False
         # movement 
@@ -69,6 +72,19 @@ class Player(pygame.sprite.Sprite):
         self.collision_sprites = collision_sprites
         self.enemy_group = enemy_group
 
+        # Skill attribute
+        self.angle=0
+        self.projectile_speed = 500
+        self.projectile_size=1
+        self.cooldown = 1000
+        self.cooldown_count = 0
+        self.max_shot=3
+        self.shot_count=0
+        # Projectile sprite sheet
+        self.projectile_spritesheet=spritesheets["projectile"]["arrow"]
+        self.projectile_width = 32
+        self.projectile_height = 32
+        self.projectile_frames = 1
 
     def input(self):
         keys = pygame.key.get_pressed()
@@ -92,10 +108,15 @@ class Player(pygame.sprite.Sprite):
             self.is_moving = True
         if keys[pygame.K_x]:
             self.current_state = "attack" 
+        if keys[pygame.K_z]:
+            self.skill()
         if keys[pygame.K_LALT]:
             pass # Lock direction
         if not any(keys[key] for key in keybinds):
             self.is_moving = False
+        else:
+            self.angle = atan2(input_vector.y, input_vector.x)
+
         self.direction = input_vector.normalize() if input_vector else input_vector
     def attack(self):
         enemies_hit = pygame.sprite.groupcollide(self.enemy_group, self.attack_group, False, False)
@@ -103,6 +124,21 @@ class Player(pygame.sprite.Sprite):
             if isinstance(enemy, Enemy):
                 if self.swing.rect.colliderect(enemy.hitbox):
                     enemy.take_damage(self.attack_damage)
+    def skill(self):
+        if self.cooldown_count > self.cooldown:     
+            self.current_state = "skill"           
+            sp.projectile(self.enemy_group,self.attack_damage,self.hitbox.center,self.angle,self.player_skill,self.projectile_spritesheet,
+                                self.collision_sprites,self.projectile_speed,self.projectile_width,self.projectile_height,
+                                self.projectile_height ,self.projectile_size)
+            sp.projectile(self.enemy_group,self.attack_damage,self.hitbox.center,self.angle,self.player_skill,self.projectile_spritesheet,
+                    self.collision_sprites,self.projectile_speed+200,self.projectile_width,self.projectile_height,
+                    self.projectile_height ,self.projectile_size)
+            sp.projectile(self.enemy_group,self.attack_damage,self.hitbox.center,self.angle,self.player_skill,self.projectile_spritesheet,
+                    self.collision_sprites,self.projectile_speed+400,self.projectile_width,self.projectile_height,
+                    self.projectile_height ,self.projectile_size)
+            self.cooldown_count = 0  # Reset cooldown
+
+            # SMTH             pygame.time.set_timer(self.PROJECTILE_EVENT, 1000, loops=3)
 
     def move(self, dt):
         # Save the previous position for resolving collisions
@@ -140,15 +176,17 @@ class Player(pygame.sprite.Sprite):
     
     def update(self, dt):
 
-        if self.current_state != "attack":
+        if self.current_state == "move" or self.current_state == "idle":
             self.current_sprite += 0.02
             # Animation state based on movement
-            self.current_state = "move" if self.is_moving else "idle"
+            if self.is_moving:
+                self.current_state = "move"    
+            else:
+                self.current_state = "idle"
             sprite_list = self.spritesheets[self.current_state]
             if self.current_sprite >= len(sprite_list): # Resets the sprite counter when it exceeded
                 self.current_sprite = 0
         elif self.current_state == "attack": # Start attack check here, use the range sprite
-
             self.current_sprite += self.attack_speed
             sprite_list = self.spritesheets[f"attack-{self.attack_var}"]
             if self.current_sprite >= len(sprite_list):
@@ -156,7 +194,15 @@ class Player(pygame.sprite.Sprite):
                 self.current_sprite = 0
                 self.current_state = "move" if self.is_moving else "idle"
                 self.attack_var = random.randint(1,2)
+        elif self.current_state == "skill":
+            self.current_sprite += 0.02
+            sprite_list = self.spritesheets[self.current_state]
+            if self.current_sprite >= len(sprite_list): # Resets the sprite counter when it exceeded
+                self.current_sprite = 0
+                self.current_state="idle"
+                sprite_list = self.spritesheets[self.current_state]
 
+        self.cooldown_count+=1
 
         # Get the current frame from the spritesheet
         cur_frame = sprite_list[int(self.current_sprite)]
@@ -234,8 +280,6 @@ class Enemy(pygame.sprite.Sprite):
         if self.HP <= 0:
             self.dead()
     def dead(self):
-
-        self.status=0
         self.kill()
 
 class EnemyRangedMove(Enemy):  # TODO Code moveement
@@ -320,12 +364,12 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
         #                       self.groups(),spritesheets["projectile"]["arrow"],self.collision_sprites,100,1)
         # then wait to attack again i think
         self.attack_timer+=0.1
-        print(self.attack_timer)
         if self.attack_timer > self.attack_speed:
             self.attack_timer=0
-            sp.projectile(self.player,self.damage,self.rect.center,self.angle,self.groups(),self.projectile_spritesheet,
+            sp.projectile(self.player,self.damage,self.hitbox.center,self.angle,self.groups(),self.projectile_spritesheet,
                           self.collision_sprites,self.projectile_speed,self.projectile_width,self.projectile_height,
                           self.projectile_height,self.projectile_size)
+            self.attack_speed = random.randint(10,14)
 
 class EnemyMelee(Enemy):
     def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites, range, detection_range, speed=200):

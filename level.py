@@ -13,6 +13,7 @@ class Level:
         self.damage_sprite = pygame.sprite.Group()
         self.collision_sprites = pygame.sprite.Group()
         self.enemy_group = pygame.sprite.Group()
+        self.player_skill = pygame.sprite.Group()
         self.bounding_box = pygame.sprite.Group()
         self.spawn_borders_group = pygame.sprite.Group()
         self.rooms = defaultdict(pygame.sprite.Sprite)
@@ -53,7 +54,7 @@ class Level:
             self.layers['decorations'].append(Sprite((x * TILE_SIZE + offset_x, y * TILE_SIZE + offset_y), surf, (self.all_sprites,)))
 
         # Set up the player (always on top of other layers)
-        self.player = Player((WIDTH // 2, HEIGHT // 2), self.all_sprites, self.collision_sprites, self.enemy_group)
+        self.player = Player((WIDTH // 2, HEIGHT // 2), self.all_sprites, self.collision_sprites, self.enemy_group, self.player_skill)
         # Load the walls layer (collidable objects)
         for x, y, surf in tmx_map.get_layer_by_name('Walls').tiles():
             self.layers['walls'].append(Sprite((x * TILE_SIZE + offset_x, y * TILE_SIZE + offset_y), surf, (self.all_sprites, self.collision_sprites)))
@@ -222,7 +223,10 @@ class Level:
 
         # print(self.spawn_borders_group)
         # print(self.enemy_group) 
-
+        self.player_skill.update(dt)
+        for sprite in self.player_skill:
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+            pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
         for sprite in self.enemy_group:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
             pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)

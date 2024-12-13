@@ -78,11 +78,12 @@ class DamageNumber(pygame.sprite.Sprite):
         self.image.set_alpha(max(0, int(self.alpha)))
 
 class projectile(pygame.sprite.Sprite): # TODO test this
-    def __init__(self, player_instance, damage, pos, angle, 
+    
+    def __init__(self, instance, damage, pos, angle, 
                  groups, spritesheet , collision_sprite, speed,
                    width, height, frames, size):
         super().__init__(groups)
-        self.player = player_instance
+        self.instance = instance
         self.damage = damage # PLS INPUT USING DAMAGE CALCULATION LATER
         self.spritesheet  = spritesheet
         self.speed = speed
@@ -104,6 +105,7 @@ class projectile(pygame.sprite.Sprite): # TODO test this
 
         # Move the projectile based on its direction and speed (scale by dt for frame-rate independence)
         movement = self.direction * self.speed * dt
+
         self.hitbox.center += movement
         self.rect.center = self.hitbox.center
 
@@ -113,9 +115,18 @@ class projectile(pygame.sprite.Sprite): # TODO test this
                 self.kill()  # Remove the projectile on collision
 
         # Check for collision with the player
-        if self.hitbox.colliderect(self.player.hitbox):
-            # self.player.HP -= self.damage  # Decrease player HP on hit
-            self.kill()  # Remove the projectile
+        if isinstance(self.instance,pygame.sprite.Group):
+            for sprite in self.instance:
+                if self.hitbox.colliderect(sprite.hitbox):
+                    # Damage enemy
+                    print("HIt enemy")
+                    self.kill()  # Remove the projectile
+                    pass
+        else:
+            if self.hitbox.colliderect(self.instance.hitbox):
+                # self.player.HP -= self.damage  # Decrease player HP on hit
+                self.kill()  # Remove the projectile
+                pass
 
 
 
