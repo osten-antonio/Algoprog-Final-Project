@@ -15,11 +15,13 @@ class Level:
         self.enemy_group = pygame.sprite.Group()
         self.player_skill = pygame.sprite.Group()
         self.bounding_box = pygame.sprite.Group()
+        self.hpbar = pygame.sprite.Group()
         self.spawn_borders_group = pygame.sprite.Group()
         self.rooms = defaultdict(pygame.sprite.Sprite)
         self.current_room = [0, 0]
 
         self.visited_room = []
+        self.enemy_classes = [BrittleArcher, GhastlyEye, ToxicHound, NormalZomb, DismemberedCrawler, Slime, BlindedGrimlock]
 
         self.room_size = (15 * TILE_SIZE, 15 * TILE_SIZE)
         self.setup(tmx_map)
@@ -134,7 +136,7 @@ class Level:
                 # Temporary rect for collision check
                 temp_rect = pygame.Rect(x, y, TILE_SIZE-20, TILE_SIZE-20)
 
-
+                chosen_enemy_class = random.choice(self.enemy_classes)
                 # Check if the position overlaps with collidable sprites
                 if not any(sprite.rect.colliderect(temp_rect) for sprite in self.collision_sprites):
                     valid_position = True
@@ -142,7 +144,7 @@ class Level:
                 attempts += 1
 
             if valid_position:
-                self.spawned_enemies.append(Test_Enemy((x,y),self.all_sprites,self.player,self.collision_sprites,self.damage_sprite))
+                self.spawned_enemies.append(chosen_enemy_class((x, y), self.all_sprites, self.player, self.collision_sprites, self.damage_sprite, self.hpbar))
                 self.spawned_enemies_pos.append(pygame.Rect(x, y, TILE_SIZE, TILE_SIZE))
 
                 # self.all_sprites.add(enemy)
@@ -176,19 +178,19 @@ class Level:
                 self.spawn_enemies(self.rooms[current_room_key].rect)
                 self.spawn_borders(self.rooms[current_room_key].rect)
 
-        if self.player.rect.left < current_room_rect.left and not moved:
+        if self.player.hitbox.left < current_room_rect.left and not moved:
             # Move left
             self.current_room[0] -= 1
             moved = True
-        elif self.player.rect.right > current_room_rect.right and not moved:
+        elif self.player.hitbox.right > current_room_rect.right and not moved:
             # Move right
             self.current_room[0] += 1
             moved = True
-        elif self.player.rect.top < current_room_rect.top and not moved:
+        elif self.player.hitbox.top < current_room_rect.top and not moved:
             # Move up
             self.current_room[1] -= 1
             moved = True
-        elif self.player.rect.bottom > current_room_rect.bottom and not moved:
+        elif self.player.hitbox.bottom > current_room_rect.bottom and not moved:
             # Move down
             self.current_room[1] += 1
             moved = True
@@ -220,13 +222,13 @@ class Level:
                 self.spawned_enemies_pos = []
                 self.spawned_enemies = []
                 self.layers['spawn_border'] = []
+        for sprite in self.hpbar:
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
 
-        # print(self.spawn_borders_group)
-        # print(self.enemy_group) 
         self.player_skill.update(dt)
         for sprite in self.player_skill:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
-            pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
+            # pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
         for sprite in self.enemy_group:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
             pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
@@ -240,6 +242,17 @@ class Level:
         for sprite in self.damage_sprite:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
 
-    
-# TODO IMPORTANT PowerUps, Level up system AND GUI, Damage numbers
+        # GUI
+        self.display_surface.blit(self.player.player_stats.health_bar_background, (10, -15))
+        # HP Bar
+        pygame.draw.rect(self.display_surface,(255,0,0),self.player.player_stats.health_bar)
+        pygame.draw.rect(self.display_surface,(255,255,0),self.player.player_stats.transition_bar)
+        pygame.draw.rect(self.display_surface,(255,255,255),(130,70,self.player.player_stats.health_bar_length,25),4)	    
+        
+        # EXP Bar
+        pygame.draw.rect(self.display_surface,(0,255,0),(130, 120, self.player.player_stats.exp / self.player.player_stats.exp_ratio,25))
+        pygame.draw.rect(self.display_surface,(255,255,255),(130,120, 180,25),4)
+        self.display_surface.blit(self.player.player_stats.level_text, (70, 120))
+
+
 

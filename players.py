@@ -15,7 +15,13 @@ spritesheets = {
         "hurt": pygame.image.load("./Assets/Soldier-Hurt.png"),
         "death": pygame.image.load("./Assets/Soldier-Death.png"),
     },
-    "test_enemy": pygame.image.load("./Assets/First/BrittleArcher.png"),
+    "brittle_arch": pygame.image.load("./Assets/First/BrittleArcher.png"),
+    "slime":  pygame.image.load("./Assets/First/DeathSlime.png"),
+    "blinded_grimlock":  pygame.image.load("./Assets/First/BlindedGrimlock.png"),
+    "ToxicHound":  pygame.image.load("./Assets/First/ToxicHound.png"),
+    "crawler":  pygame.image.load("./Assets/First/DismemberedCrawler.png"),
+    "ghast":  pygame.image.load("./Assets/First/GhastlyEye.png"),
+    "zomb":  pygame.image.load("./Assets/First/MutilatedStumbler.png"),
     "projectile":{
         "arrow":pygame.image.load("./Assets/Arrow.png")
     }
@@ -28,32 +34,39 @@ def get_frames(sheet, nFrame, width, height, scale):
     return frame
 
 class Player(pygame.sprite.Sprite): 
-    # TODO Take damage function (check if projectile collides (ranged), and if enemy swing range collide (swing range is new rect))
-    swing_range = 50
-    health = 100
-    max_health = 100
-    attack_speed=0.03
-    defence = 20
-    level = 1
-    speed=500
-    attack_damage=10000
-    rooms_cleared = 0
     def __init__(self, pos, groups, collision_sprites, enemy_group, player_skill):
         super().__init__(groups)
         self.spritesheets={
             "idle": [get_frames(spritesheets["player"]["idle"], i, 15, 19, 2.7) for i in range(6)],
             "move": [get_frames(spritesheets["player"]["move"], i,  15, 19, 2.7) for i in range(8)],
-            "attack-1": [get_frames(spritesheets["player"]["attack"], i,  34, 24, 2.7) for i in range(6)],
-            "attack-2": [get_frames(spritesheets["player"]["attack-2"], i,  34, 24, 2.7) for i in range(6)],
-            "skill": [get_frames(spritesheets["player"]["attack-3"], i,  15, 19, 2.7) for i in range(6)],
+            "attack-1": [get_frames(spritesheets["player"]["attack"], i,  68, 24, 2.7) for i in range(6)],
+            "attack-2": [get_frames(spritesheets["player"]["attack-2"], i,  68, 24, 2.7) for i in range(6)],
+            "skill": [get_frames(spritesheets["player"]["attack-3"], i,  72, 20, 2.7) for i in range(9)],
             "hurt": [get_frames(spritesheets["player"]["hurt"], i,  15, 19, 2.7) for i in range(4)],
         }
+        
+        # Player attributes
+        self.swing_range = 50
+        self.health = 100
+        self.max_health = 100
+        self.attack_speed=0.03
+        self.defence = 20
+        self.level = 1
+        self.current_exp = 0
+        self.max_exp = 20
+        self.speed=500
+        self.attack_damage=10000
+        self.rooms_cleared = 0
+        self.current_health = 100
+        self.target_health=100
+
+
         self.player_skill= player_skill
         self.current_sprite = 0
         self.current_state = "idle"
         self.image = self.spritesheets[self.current_state][int(self.current_sprite)]
         
-        self.rect = self.image.get_frect(topleft = pos)
+        self.rect = self.image.get_frect(center = pos)
         self.rect.height=16*2.8
         self.rect.width=16*2.8
 
@@ -72,11 +85,14 @@ class Player(pygame.sprite.Sprite):
         self.collision_sprites = collision_sprites
         self.enemy_group = enemy_group
 
+
+        self.player_stats = sp.PlayerStats(self)
+
         # Skill attribute
         self.angle=0
         self.projectile_speed = 500
-        self.projectile_size=1
-        self.cooldown = 1000
+        self.projectile_size=2.5
+        self.cooldown = 100
         self.cooldown_count = 0
         self.max_shot=3
         self.shot_count=0
@@ -85,6 +101,7 @@ class Player(pygame.sprite.Sprite):
         self.projectile_width = 32
         self.projectile_height = 32
         self.projectile_frames = 1
+
 
     def input(self):
         keys = pygame.key.get_pressed()
@@ -110,12 +127,12 @@ class Player(pygame.sprite.Sprite):
             self.current_state = "attack" 
         if keys[pygame.K_z]:
             self.skill()
-        if keys[pygame.K_LALT]:
-            pass # Lock direction
         if not any(keys[key] for key in keybinds):
             self.is_moving = False
         else:
-            self.angle = atan2(input_vector.y, input_vector.x)
+            if not keys[pygame.K_LALT]:
+                 # Lock direction
+                self.angle = atan2(input_vector.y, input_vector.x)
 
         self.direction = input_vector.normalize() if input_vector else input_vector
     def attack(self):
@@ -137,8 +154,6 @@ class Player(pygame.sprite.Sprite):
                     self.collision_sprites,self.projectile_speed+400,self.projectile_width,self.projectile_height,
                     self.projectile_height ,self.projectile_size)
             self.cooldown_count = 0  # Reset cooldown
-
-            # SMTH             pygame.time.set_timer(self.PROJECTILE_EVENT, 1000, loops=3)
 
     def move(self, dt):
         # Save the previous position for resolving collisions
@@ -175,7 +190,7 @@ class Player(pygame.sprite.Sprite):
                     self.velocity.y = 0
     
     def update(self, dt):
-
+        self.player_stats.update()
         if self.current_state == "move" or self.current_state == "idle":
             self.current_sprite += 0.02
             # Animation state based on movement
@@ -195,7 +210,7 @@ class Player(pygame.sprite.Sprite):
                 self.current_state = "move" if self.is_moving else "idle"
                 self.attack_var = random.randint(1,2)
         elif self.current_state == "skill":
-            self.current_sprite += 0.02
+            self.current_sprite += 0.06
             sprite_list = self.spritesheets[self.current_state]
             if self.current_sprite >= len(sprite_list): # Resets the sprite counter when it exceeded
                 self.current_sprite = 0
@@ -216,14 +231,14 @@ class Player(pygame.sprite.Sprite):
     # TODO Dash (I frames)
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self,pos, groups, player_instance, spritesheet,collision_sprites,damage_sprite, speed = 2):
+    def __init__(self,pos, groups, player_instance, spritesheet,collision_sprites,damage_sprite,hpbar, speed = 2):
         super().__init__(groups) 
         self.damage_sprite=damage_sprite
         self.current_frame = 0
         self.animation_speed = 0.01
         self.spritesheet=spritesheet
         self.player = player_instance
-
+        self.hpgroup = hpbar
         self.frames = [get_frames(self.spritesheet,i,16,16,2.7) for i in range(4)]
         self.image = self.frames[int(self.current_frame)]
         self.rect = self.image.get_frect(topleft = pos)
@@ -236,6 +251,8 @@ class Enemy(pygame.sprite.Sprite):
         self.velocity= vector()
         # Default value
         self.HP = 100 
+        self.MAXHP = 100
+        self.HPBAR = sp.HPBar(self,self.hpgroup)
         self.ATK = 10
         self.damage = self.ATK # FIX LATER
         self.DEF = 0
@@ -260,6 +277,7 @@ class Enemy(pygame.sprite.Sprite):
                     self.velocity.y = 0
 
     def update(self, dt):
+        self.HPBAR.update()
         self.current_frame += self.animation_speed
         if self.current_frame >= len(self.frames):
             self.current_frame = 0
@@ -282,9 +300,9 @@ class Enemy(pygame.sprite.Sprite):
     def dead(self):
         self.kill()
 
-class EnemyRangedMove(Enemy):  # TODO Code moveement
-    def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites,range, speed=2):
-        super().__init__(pos, groups, player_instance, spritesheet, collision_sprites, speed)
+class EnemyRanged(Enemy):  # TODO Code moveement
+    def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites, hpgroup, range, speed=2):
+        super().__init__(pos, groups, player_instance, spritesheet, collision_sprites,hpgroup, speed)
         self.spritesheet=spritesheet
         self.player = player_instance
         self.is_paused = False
@@ -298,7 +316,7 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
         self.timer_counter=0
         self.attack_timer=0
         self.projectile_speed = 500
-        self.projectile_size=1
+        self.projectile_size=2.5
         # Projectile sprite sheet
         self.projectile_spritesheet=spritesheets["projectile"]["arrow"]
         self.projectile_width = 32
@@ -351,7 +369,7 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
                 self.collided = False  # Reset collided state
                 self.pause_counter = 0
         if self.player.hitbox.colliderect(self.attack_range): 
-            # TODO Cast a line to see if the player is visible or not
+            # TODO Cast a line to see if the player is visible or not, this also for melee
             self.attack()
         self.move(dt)
 
@@ -359,10 +377,7 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
         # Angle needs to be here so tha tit updates constantly
         self.angle=atan2(self.player.hitbox.centery-self.rect.centery,
                                     self.player.hitbox.centerx-self.rect.centerx)
-        # Immediately attakcs
-        # sp.projectileEnemiesBasic(self.player,self.damage, self.rect.center,atan2(self.player.hitbox.centery-self.rect.centery,self.player.hitbox.centerx-self.rect.centery),
-        #                       self.groups(),spritesheets["projectile"]["arrow"],self.collision_sprites,100,1)
-        # then wait to attack again i think
+
         self.attack_timer+=0.1
         if self.attack_timer > self.attack_speed:
             self.attack_timer=0
@@ -372,8 +387,8 @@ class EnemyRangedMove(Enemy):  # TODO Code moveement
             self.attack_speed = random.randint(10,14)
 
 class EnemyMelee(Enemy):
-    def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites, range, detection_range, speed=200):
-        super().__init__(pos, groups, player_instance, spritesheet, collision_sprites, speed)
+    def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites, hpgroup, range, detection_range, speed=200):
+        super().__init__(pos, groups, player_instance, spritesheet, collision_sprites, hpgroup, speed)
         self.player = player_instance
         self.notice_range = pygame.Rect(pos[0] - detection_range, pos[1] - detection_range, detection_range * 2, detection_range * 2)
         self.range = range 
@@ -447,16 +462,38 @@ class EnemyMelee(Enemy):
    
         self.notice_range.center = self.hitbox.center
 
-class Test_Enemy(EnemyRangedMove):
-    def __init__(self, pos,groups,player_instance ,collision_sprites,speed=500):
-        super().__init__(pos, groups, player_instance, spritesheets["test_enemy"], collision_sprites, 200, speed)
+class BrittleArcher(EnemyRanged):
+    def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=500):
+        super().__init__(pos, groups, player_instance, spritesheets["brittle_arch"], 
+        collision_sprites,hpgroup, 200, speed)
 
-# TODO BIG PRIORITY, Projectiles > Enemy attack > skill
+class GhastlyEye(EnemyRanged):
+    def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=500):
+        super().__init__(pos, groups, player_instance, spritesheets["ghast"], 
+        collision_sprites,hpgroup, 200, speed)
+        #DEFINE NEW MOVEMENT LOGIC EHRE
 
-# TODO Player ONLY ATTACK ONCE
+class ToxicHound(EnemyMelee):
+    def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=500):
+        super().__init__(pos, groups, player_instance, spritesheets["toxichound"], 
+        collision_sprites,hpgroup, 2 ,200, speed)
 
-# TODO diff enemies
+class NormalZomb(EnemyMelee):
+    def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=500):
+        super().__init__(pos, groups, player_instance, spritesheets["zomb"], 
+        collision_sprites,hpgroup, 2, 200, speed)
 
-# TODO Fog of war 
+class DismemberedCrawler(EnemyMelee):
+    def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=500):
+        super().__init__(pos, groups, player_instance, spritesheets["crawler"], 
+        collision_sprites,hpgroup, 2,200, speed)
 
+class Slime(EnemyMelee):
+    def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=500):
+        super().__init__(pos, groups, player_instance, spritesheets["slime"], 
+        collision_sprites,hpgroup, 2,200, speed)
 
+class BlindedGrimlock(EnemyRanged):
+    def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=500):
+        super().__init__(pos, groups, player_instance, spritesheets["blinded_grimlock"], 
+        collision_sprites,hpgroup, 200, speed)

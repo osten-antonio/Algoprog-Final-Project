@@ -29,12 +29,16 @@ class PlayerSwing(pygame.sprite.Sprite):
     def update(self, *args, **kwargs):
         # Update the swing rectangle to follow the player
         direction = self.player.direction
-        if direction.x != 0 or direction.y != 0:
-            self.angle = degrees(atan2(direction.x,direction.y)) if\
-                degrees(atan2(direction.x,direction.y)) >=0 else\
-                    degrees(atan2(direction.x,direction.y))+360
-              
+        keys = pygame.key.get_pressed()
+        if not keys[pygame.K_LALT]:
+            if direction.x != 0 or direction.y != 0:
+                self.angle = degrees(atan2(direction.x,direction.y)) if\
+                    degrees(atan2(direction.x,direction.y)) >=0 else\
+                        degrees(atan2(direction.x,direction.y))+360
+            keys = pygame.key.get_pressed()
+
         # Direction
+
         if self.angle == 0:
             self.rect.top=self.player.hitbox.centery
             self.rect.centerx=self.player.hitbox.centerx
@@ -87,11 +91,13 @@ class projectile(pygame.sprite.Sprite): # TODO test this
         self.damage = damage # PLS INPUT USING DAMAGE CALCULATION LATER
         self.spritesheet  = spritesheet
         self.speed = speed
+        self.angle = angle
         self.collision_sprite = collision_sprite
         self.current_frame = 0
         self.frames = [get_frames(self.spritesheet,i, width,height,size) for i in range(frames)]
         self.image = self.frames[int(self.current_frame)]
-        self.image = pygame.transform.rotate(self.image,angle)
+        
+        self.image = pygame.transform.rotate(self.image,degrees(-self.angle))
         self.rect = self.image.get_frect(topleft = pos)
         self.hitbox=pygame.FRect((self.rect.topleft[0]+5,self.rect.topleft[1]+5),(10,10))
 
@@ -129,10 +135,97 @@ class projectile(pygame.sprite.Sprite): # TODO test this
                 pass
 
 
+class HPBar(pygame.sprite.Sprite):
+    def __init__(self, enemy_instance, group, width=40, height=6, border_color=(0, 0, 0), health_color=(255, 0, 0), background_color=(100, 100, 100)):
 
+        super().__init__(group)
         
+        self.enemy = enemy_instance
+        self.width = width
+        self.height = height
+        self.border_color = border_color
+        self.health_color = health_color
+        self.background_color = background_color
+        
+        self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA) 
+        self.rect = self.image.get_rect()  
+
+    def update(self, *args, **kwargs):
+        self.rect.midbottom = self.enemy.rect.midtop 
+        self.rect.y -= 10 
     
-    
+        health_percentage = max(self.enemy.HP / self.enemy.MAXHP, 0)  
+        if health_percentage <=0:
+            self.kill()
+        current_health_width = int(self.width * health_percentage)
+
+        self.image.fill((0, 0, 0, 0)) 
+        pygame.draw.rect(self.image, self.background_color, (0, 0, self.width, self.height))
+        
+        # Draw the current health bar
+        if current_health_width > 0:
+            pygame.draw.rect(self.image, self.health_color, (0, 0, current_health_width, self.height))
+        
+        # Draw the border around the HP bar
+        pygame.draw.rect(self.image, self.border_color, (0, 0, self.width, self.height), 1)  # 1 pixel border
+
+class PlayerStats(pygame.sprite.Sprite):
+    def __init__(self,player_instance):
+        super().__init__()
+        self.current_health = player_instance.current_health
+        self.target_health = player_instance.target_health
+        self.max_health = player_instance.max_health
+
+        self.exp = player_instance.current_exp 
+        self.max_exp = player_instance.max_exp
+        self.exp_ratio = self.max_exp / 180 
+        self.level = player_instance.level
+        self.level_text = pygame.font.SysFont('arial', 20, bold=True).render(f"Lv. {self.level}", True, "#009900")
+
+        self.health_bar_length = 200
+        self.health_ratio = self.max_health / self.health_bar_length
+        self.health_change_speed = 10
+        self.health_bar = pygame.Rect(130,70,self.health_bar_length,25)
+
+        transition_width=0
+        self.transition_bar = pygame.Rect(self.health_bar.right,70,transition_width,25)
+
+        # Load the background image
+        self.health_bar_background = pygame.image.load('./assets/player_stats_bg.png').convert()
+        self.health_bar_background = pygame.transform.scale(self.health_bar_background, (384, 240))
+
+    def get_damage(self,amount):
+        if self.target_health > 0:
+            self.target_health -= amount
+        if self.target_health < 0:
+            self.target_health = 0
+
+    def get_health(self,amount):
+        if self.target_health < self.max_health:
+            self.target_health += amount
+        if self.target_health > self.max_health:
+            self.target_health = self.max_health
+
+    def update(self, *args , **kwargs):
+        # Draw the background image for the health bar
+        transition_width = 0
+        transition_color = (255,0,0)
+
+        if self.current_health < self.target_health:
+            self.current_health += self.health_change_speed
+            transition_width = int((self.target_health - self.current_health) / self.health_ratio)
+            transition_color = (0,255,0)
+
+        if self.current_health > self.target_health:
+            self.current_health -= self.health_change_speed 
+            transition_width = int((self.target_health - self.current_health) / self.health_ratio)
+ 
+
+        health_bar_width = int(self.current_health / self.health_ratio)
+        self.health_bar = pygame.Rect(130,70,health_bar_width,25)
+        self.transition_bar = pygame.Rect(self.health_bar.right,70,transition_width,25)
+		
+
 
 
 
