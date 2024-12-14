@@ -1,6 +1,6 @@
 from settings import *
 from math import *
-from players import get_frames
+from entities import get_frames
 
 class Sprite(pygame.sprite.Sprite):
     def __init__(self, pos, surf, groups):
@@ -126,10 +126,9 @@ class projectile(pygame.sprite.Sprite): # TODO test this
             for sprite in self.instance:
                 if self.hitbox.colliderect(sprite.hitbox):
                     sprite.take_damage(self.damage)
-                    print("HIt enemy")
+
                     self.kill()  # Remove the projectile
-                    pass
-        else:
+        else: 
             if self.hitbox.colliderect(self.instance.hitbox):
                 self.instance.take_damage(self.damage)
                 self.kill()  # Remove the projectile
@@ -152,7 +151,7 @@ class HPBar(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()  
 
     def update(self, *args, **kwargs):
-        # print("Take damage")
+
         self.rect.midbottom = self.enemy.rect.midtop 
         self.rect.y -= 10 
     
@@ -161,7 +160,7 @@ class HPBar(pygame.sprite.Sprite):
             self.kill()
         current_health_width = int(self.width * health_percentage)
 
-        self.image.fill((0, 0, 0, 0)) 
+        self.image.fill('black') 
         pygame.draw.rect(self.image, self.background_color, (0, 0, self.width, self.height))
         
         # Draw the current health bar
@@ -183,10 +182,10 @@ class PlayerStats(pygame.sprite.Sprite):
         self.max_exp = player_instance.max_exp
         self.exp_ratio = self.max_exp / 180 
         self.level = player_instance.level
-        self.level_text = pygame.font.SysFont('arial', 20, bold=True).render(f"Lv. {self.level}", True, "#009900")
+
 
         self.health_bar_length = 200
-        self.health_ratio = self.max_health / self.health_bar_length
+
         self.health_change_speed = 10
         self.health_bar = pygame.Rect(130,70,self.health_bar_length,25)
 
@@ -212,6 +211,13 @@ class PlayerStats(pygame.sprite.Sprite):
     def update(self, *args , **kwargs):
         # Draw the background image for the health bar
         self.exp = self.player.current_exp
+        self.exp_ratio = self.player.max_exp / 180 
+        self.level = self.player.level
+
+        self.current_health = self.player.current_health
+        self.target_health = self.player.target_health
+        self.max_health = self.player.max_health
+        self.health_ratio = self.max_health / self.health_bar_length
         transition_width = 0
         self.current_health = self.player.current_health
         self.target_health = self.player.target_health
@@ -229,7 +235,17 @@ class PlayerStats(pygame.sprite.Sprite):
         self.transition_bar = pygame.Rect(self.health_bar.right,70,transition_width,25)
 		
 
+class UpgradeText(pygame.sprite.Sprite):
+    def __init__(self,text_arg,color=(255, 255, 255)):
+        super().__init__()   
 
-
-
-
+        self.text = pygame.font.SysFont('arial', 20, bold=True).render(text_arg, True, color)
+        self.rect = self.text.get_rect(bottomleft=(0, 0))
+        self.alpha = 255  
+        self.lifespan = 1500
+    
+    def update(self, *args, **kwargs):
+        self.alpha -= 255 / self.lifespan  
+        if self.alpha <= 0:
+            self.kill()  
+        self.text.set_alpha(max(0, int(self.alpha)))

@@ -2,6 +2,7 @@ from settings import *
 from level import Level
 from pytmx.util_pygame import load_pygame
 from os.path import join
+from gui import mainMenu
 
 class Game:
     def __init__(self):
@@ -22,19 +23,20 @@ class Game:
             109: load_pygame('./Rooms/Level 1/09.tmx'),
             110: load_pygame('./Rooms/Level 1/10.tmx'),
         }
-        self.current_stage = Level(load_pygame('./Rooms/Level 1/start.tmx'))
-
+        self.stage = Level(load_pygame('./Rooms/Level 1/start.tmx'))
     def run(self):
-        while True:
+        while self.stage.player.alive:
             dt = self.clock.tick() / 1000
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
             self.display_surface.fill('black')
-            self.current_stage.run(dt)
+            self.stage.run(dt)
             pygame.display.update()
 
+        
+
 if __name__ == '__main__':
-    game = Game()
-    game.run()
+    game = mainMenu()
+    

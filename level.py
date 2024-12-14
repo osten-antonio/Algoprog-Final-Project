@@ -1,6 +1,6 @@
 from settings import *
 from sprites import *
-from players import *
+from entities import *
 from collections import defaultdict
 import random
 
@@ -43,8 +43,7 @@ class Level:
         self.rooms["[0, 0]"] =  BoundingBox(offset_x-30,offset_y-25, tmx_map.width*TILE_SIZE, tmx_map.height*TILE_SIZE, self.bounding_box) # 30 and 25 is magic number im sorry
         
         # Fix this, move the rect relative to the player
-        # print(f"x={TILE_SIZE + offset_x}")
-        # print(f"y={TILE_SIZE + offset_y}")
+ 
         for x, y, surf in tmx_map.get_layer_by_name('Water').tiles():
             self.layers['water'].append(Sprite((x * TILE_SIZE + offset_x, y * TILE_SIZE + offset_y), surf, (self.all_sprites,self.collision_sprites)))
         # Load the floor layer (bg tiles, path, etc.)
@@ -117,14 +116,12 @@ class Level:
 
             # Only generate the room if it doesn't already exist
             if adjacent_room_key not in self.rooms:
-                # print(f"Generating {adjacent_room}")
                 offset_x = self.rooms[str(current_room)].rect.left + offset[0] * self.room_size[0]
                 offset_y = self.rooms[str(current_room)].rect.top + offset[1] * self.room_size[1]
                 self.rooms[adjacent_room_key] = BoundingBox(offset_x, offset_y, 15 * TILE_SIZE, 15 * TILE_SIZE, self.bounding_box)
                 self.generate((offset_x+30, offset_y+25))
 
     def spawn_enemies(self, bounding_box, max_enemies = 10):
-        print(bounding_box)
         for _ in range(max_enemies):
             attempts = 0
             valid_position = False
@@ -161,6 +158,7 @@ class Level:
         camera_offset = vector(WIDTH // 2 - self.player.hitbox.centerx, HEIGHT // 2 - self.player.hitbox.centery)
         self.display_surface.fill((0, 0, 0)) 
         # Update all sprites
+        
         self.all_sprites.update(dt)
         self.damage_sprite.update(dt)
 
@@ -170,7 +168,6 @@ class Level:
         current_room_rect = self.rooms[current_room_key].rect
         moved=False
  
-        # print(self.visited_room)
         if current_room_key not in self.visited_room: 
             self.generate_adjacent(self.current_room)
             if current_room_key != str([0,0]):
@@ -216,7 +213,12 @@ class Level:
         for enemy_rect in self.spawned_enemies_pos: # Spawned enemies
             pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
 
-        if not self.enemy_group: # Checks if there is enemy remaining
+        if not self.enemy_group and current_room_key!="(0,0)" and current_room_key in self.visited_room: # Checks if there is enemy remaining
+            global rooms_cleared, difficulty, diffculty_modifier
+            rooms_cleared += 1
+            print(rooms_cleared)
+
+            difficulty += diffculty_modifier
             for wall in self.spawn_borders_group:
                 wall.kill()
                 self.spawned_enemies_pos = []
@@ -231,6 +233,10 @@ class Level:
             # pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
         for sprite in self.enemy_group:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+            try:    
+                pygame.draw.rect(self.display_surface, "red", sprite.attack_range.move(camera_offset), 2)
+            except:
+                pass
             # pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
 
         # pygame.draw.rect(self.display_surface, "green", self.player.swing.rect.move(camera_offset), 2)
@@ -250,8 +256,12 @@ class Level:
         
         # EXP Bar
         pygame.draw.rect(self.display_surface,(0,255,0),(130, 120, self.player.player_stats.exp / self.player.player_stats.exp_ratio,25))
+
         pygame.draw.rect(self.display_surface,(255,255,255),(130,120, 180,25),4)
-        self.display_surface.blit(self.player.player_stats.level_text, (70, 120))
-
-
+        level_text = pygame.font.SysFont('arial', 20, bold=True).render(f"Lv. {self.player.level}", True, "#009900")
+        self.display_surface.blit(level_text, (70, 120))
+        
+        self.player.upgradeText.update()
+        # Upgrade text
+        self.display_surface.blit((self.player.upgradeText.text), (10, HEIGHT-40))
 

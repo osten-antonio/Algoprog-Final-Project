@@ -1,9 +1,9 @@
 from settings import *
-from math import degrees,sqrt,atan2
+from math import *
 import sprites as sp
 import random
 import time
-
+from gui import *
 
 spritesheets = {
     "player": {
@@ -41,27 +41,59 @@ class Player(pygame.sprite.Sprite):
             "move": [get_frames(spritesheets["player"]["move"], i,  15, 19, 2.7) for i in range(8)],
             "attack-1": [get_frames(spritesheets["player"]["attack"], i,  68, 24, 2.7) for i in range(6)],
             "attack-2": [get_frames(spritesheets["player"]["attack-2"], i,  68, 24, 2.7) for i in range(6)],
-            "skill": [get_frames(spritesheets["player"]["attack-3"], i,  72, 20, 2.7) for i in range(9)],
+            "bow": [get_frames(spritesheets["player"]["attack-3"], i,  72, 20, 2.7) for i in range(9)],
             "hurt": [get_frames(spritesheets["player"]["hurt"], i,  16, 18, 2.7) for i in range(4)],
             "dead": [get_frames(spritesheets["player"]["death"], i,  19, 18, 2.7) for i in range(4)],
         }
-        
+        with open("player_data.json", "r") as file:
+            data = json.load(file)
+            self.attributes = {
+                'ATK': data.get('ATK', 0),
+                'HP': data.get('HP', 0),
+                'DEF': data.get('DEF', 0),
+                'SPEED': data.get('SPEED', 0)
+            }
+            self.selected_class = data.get('selected_class', 0),
         # Player attributes
-        self.swing_range = 50
-        self.health = 100
-        self.max_health = 100
+        if self.selected_class[0] == 'archer':
+            starting_hp = 100 + (self.attributes['HP'] * 20)/2
+            starting_def = 20 + (self.attributes['DEF'] * 2)/1.5
+            starting_atk = 50 + (self.attributes['ATK'] * 20)
+            starting_range = 50
+        elif self.selected_class[0] == 'paladin':
+            starting_hp = 100 + (self.attributes['HP'] * 20)*2
+            starting_def = 20 + (self.attributes['DEF'] * 2)*1.1
+            starting_atk = 50 + (self.attributes['ATK'] * 20)/1.2
+            starting_range = 50
+        else:
+            starting_hp = 100 + (self.attributes['HP'] * 20)
+            starting_def = 20 + (self.attributes['DEF'] * 2)
+            starting_atk = 50 + (self.attributes['ATK'] * 20) * 1.5
+            starting_range = 50*2
+            
+
+        self.healing = 5
+
+        self.pala_ticks = 200
+        self.pala_count = 0
+
+        self.health = starting_hp
+        self.max_health = starting_hp
+        self.current_health = starting_hp
+        self.target_health= starting_hp
+
         self.attack_speed=0.03
-        self.defence = 20
+        self.defence = starting_def
         self.level = 1
-        self.current_exp = 0
+        self.current_exp = 0.1
         self.max_exp = 20
-        self.speed=500
-        self.attack_damage= 50
+        self.speed=500  + (self.attributes['SPEED'] * 30)
+        self.attack_damage= 50+ (self.attributes['ATK'] * 20)
         self.rooms_cleared = 0
-        self.current_health = 100
-        self.target_health=100
 
-
+        self.dash_counter = 1
+        self.dash_timer = 1.5
+        self.swing_range = 50
         self.player_skill= player_skill
         self.current_sprite = 0
         self.current_state = "idle"
@@ -85,15 +117,17 @@ class Player(pygame.sprite.Sprite):
         self.swing.add(self.attack_group)
         self.collision_sprites = collision_sprites
         self.enemy_group = enemy_group
-
+        self.last_dash = 0
 
         self.player_stats = sp.PlayerStats(self)
+        self.upgradeText = sp.UpgradeText("")
+        # bow attribute
 
-        # Skill attribute
         self.angle=0
         self.projectile_speed = 500
         self.projectile_size=2.5
-        self.cooldown = 100
+        self.cooldown = 100 if self.selected_class[0] == 'archer' else 300
+        
         self.cooldown_count = 0
         self.max_shot=3
         self.shot_count=0
@@ -103,6 +137,8 @@ class Player(pygame.sprite.Sprite):
         self.projectile_width = 32
         self.projectile_height = 32
         self.projectile_frames = 1
+
+        self.alive = True
 
 
     def input(self):
@@ -128,7 +164,11 @@ class Player(pygame.sprite.Sprite):
         if keys[pygame.K_x]:
             self.current_state = "attack" 
         if keys[pygame.K_z]:
-            self.skill()
+            self.bow()
+        if keys[pygame.K_SPACE]:
+            if self.dash_counter >= self.dash_timer:
+                self.dash_counter=0
+                self.dash()
         if not any(keys[key] for key in keybinds):
             self.is_moving = False
         else:
@@ -138,24 +178,36 @@ class Player(pygame.sprite.Sprite):
 
         self.direction = input_vector.normalize() if input_vector else input_vector
     def attack(self):
-        print("AAFADJGHKAG")
         enemies_hit = pygame.sprite.groupcollide(self.enemy_group, self.attack_group, False, False)
         for enemy in enemies_hit:
             if isinstance(enemy, Enemy):
                 if self.swing.rect.colliderect(enemy.hitbox):
-                    enemy.take_damage(self.attack_damage)
-    def skill(self):
+                    enemy.take_damage(self.attack_damage/2 if self.selected_class[0]=='archer' else self.attack_damage)
+    def dash(self):
+        self.dash_direction = pygame.Vector2(cos(self.angle), sin(self.angle)).normalize()
+        self.last_dash = pygame.time.get_ticks()
+        for i in range(20):
+            self.hitbox.x += self.dash_direction.x * self.speed *0.01
+            self.check_collision('x')
+            self.hitbox.y += self.dash_direction.y * self.speed *0.01
+            self.check_collision('y')
+
+    def bow(self):
         if self.cooldown_count > self.cooldown:     
-            self.current_state = "skill"           
-            sp.projectile(self.enemy_group,self.attack_damage,self.hitbox.center,self.angle,self.player_skill,self.projectile_spritesheet,
-                                self.collision_sprites,self.projectile_speed,self.projectile_width,self.projectile_height,
-                                self.projectile_height ,self.projectile_size)
-            sp.projectile(self.enemy_group,self.attack_damage,self.hitbox.center,self.angle,self.player_skill,self.projectile_spritesheet,
-                    self.collision_sprites,self.projectile_speed+200,self.projectile_width,self.projectile_height,
-                    self.projectile_height ,self.projectile_size)
-            sp.projectile(self.enemy_group,self.attack_damage,self.hitbox.center,self.angle,self.player_skill,self.projectile_spritesheet,
-                    self.collision_sprites,self.projectile_speed+400,self.projectile_width,self.projectile_height,
-                    self.projectile_height ,self.projectile_size)
+            self.current_state = "bow"
+            for i in range(1,601,200):
+                sp.projectile(self.enemy_group,self.attack_damage,self.hitbox.center,self.angle,self.player_skill,self.projectile_spritesheet,
+                                    self.collision_sprites,self.projectile_speed+i,self.projectile_width,self.projectile_height,
+                                    self.projectile_height ,self.projectile_size)
+ 
+            if self.selected_class[0] == 'archer':
+                for j in range(-1,2,2):
+                    for i in range(1,601,200):
+                        angle_change = j-0.8 if j>0 else j+0.8
+                        sp.projectile(self.enemy_group,self.attack_damage,self.hitbox.center,self.angle+angle_change,self.player_skill,self.projectile_spritesheet,
+                                    self.collision_sprites,self.projectile_speed+i,self.projectile_width,self.projectile_height,
+                                    self.projectile_height ,self.projectile_size)
+
             self.cooldown_count = 0  # Reset cooldown
 
     def move(self, dt):
@@ -192,20 +244,52 @@ class Player(pygame.sprite.Sprite):
                     # Prevent movement after collision
                     self.velocity.y = 0
     def take_damage(self,damage):
-        self.current_state= "hurt"
-        self.target_health -= damage * (1 - (self.defence/400))
-        if self.target_health < 0:
-            self.target_health = 0
+        if pygame.time.get_ticks() - self.last_dash >= 300: # Check for i frames
+            self.current_state= "hurt"
+            self.target_health -= damage * (1 - (self.defence/400))
+            if self.target_health < 0:
+                self.target_health = 0
+            
+            if self.current_health <= 0:
+                self.current_state = "dead"
+                self.alive = False
+                gameOverScreen()
+
+    def level_up(self):
+        stats = {
+            'attack': self.attack_damage,
+            'attack_speed': self.attack_speed,
+            'max HP': self.max_health,
+            'attack_damage': self.attack_damage,
+            'defence': self.defence
+        }
+        stats_name = ['attack', 'attack_speed', 'max HP', 'attack_damage','defence']
+
+        upgraded = []
+        for i in range(3):
+            stat_name = random.choice(list(stats))
+            setattr(self, stat_name,stats[stat_name]*1.1 )
+            upgraded.append(stat_name)
         
-        if self.current_health <= 0:
-            self.current_state = "dead"
+        self.upgradeText = sp.UpgradeText(f"Your {upgraded[0]}, {upgraded[1]}, and {upgraded[2]} got upgrade by {upgrade_value}x!")
+    
     def update(self, dt):
-        print(self.current_exp)
-        print(self.level)
-        # print(self.target_health)
-        # print(f"cur:{self.current_health}")
+        self.dash_counter+=0.01
+
+        self.pala_count += 1
+    
+        if self.pala_count > self.pala_ticks and self.selected_class[0] == 'paladin':
+            self.pala_count=0
+
+            self.target_health += self.max_health * 0.07
+            if self.target_health > self.max_health:
+                self.target_health = self.max_health
+
         if self.current_health >= self.target_health:
             self.current_health -= self.player_stats.health_change_speed
+        if self.current_health < self.target_health:
+            self.current_health += self.player_stats.health_change_speed
+        
         
         self.player_stats.update()
         if self.current_state == "move" or self.current_state == "idle":
@@ -237,9 +321,10 @@ class Player(pygame.sprite.Sprite):
         self.cooldown_count+=1
 
         if self.current_exp > self.max_exp:
+            self.level_up()
             self.level += 1
             self.health = self.max_health
-            self.current_exp = 0
+            self.current_exp = 0.1
             self.max_exp += self.max_exp * (1+(self.level*10)/100)
         # Get the current frame from the spritesheet
         cur_frame = sprite_list[int(self.current_sprite)]
@@ -298,6 +383,7 @@ class Enemy(pygame.sprite.Sprite):
                     self.velocity.y = 0
 
     def update(self, *args, **kwargs):
+        print(self.HP)
         self.HPBAR.update()
         self.current_frame += self.animation_speed
         if self.current_frame >= len(self.frames):
@@ -313,7 +399,6 @@ class Enemy(pygame.sprite.Sprite):
         self.image = pygame.transform.flip(cur_frame, True, False) if self.flipped else cur_frame
 
     def take_damage(self, damage): # TODO
-        print("AAAAA")
         self.HP -= damage
         sp.DamageNumber(self.rect.center, self.player.attack_damage, self.damage_sprite) # Use the center of the enemy rect for the position
         
@@ -321,11 +406,15 @@ class Enemy(pygame.sprite.Sprite):
             self.dead()
 
     def dead(self):
+        if random.random() < 0.5:
+            self.player.target_health += self.player.max_health * 0.07
+            if self.player.target_health > self.player.max_health:
+                self.player.target_health = self.player.max_health
         self.player.current_exp += self.exp_value
         self.HPBAR.update()
         self.kill()
 
-class EnemyRanged(Enemy):  # TODO Code moveement
+class EnemyRanged(Enemy):
     def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites, hpgroup, range, speed):
         super().__init__(pos, groups, player_instance, spritesheet, collision_sprites,hpgroup, speed)
         self.spritesheet=spritesheet
@@ -394,7 +483,6 @@ class EnemyRanged(Enemy):  # TODO Code moveement
                 self.collided = False  # Reset collided state
                 self.pause_counter = 0
         if self.player.hitbox.colliderect(self.attack_range): 
-            # TODO Cast a line to see if the player is visible or not, this also for melee
             self.attack()
         self.move(dt)
 
@@ -410,18 +498,18 @@ class EnemyRanged(Enemy):  # TODO Code moveement
             sp.projectile(self.player,self.damage,self.hitbox.center,self.angle,self.groups(),self.projectile_spritesheet,
                           self.collision_sprites,self.projectile_speed,self.projectile_width,self.projectile_height,
                           self.projectile_height,self.projectile_size)
-            
+        self.attack_range.center = self.hitbox.center
 
 class EnemyMelee(Enemy):
-    def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites, hpgroup, detection_range, speed):
+    def __init__(self, pos, groups, player_instance, spritesheet, collision_sprites, hpgroup, detection_range, range, speed):
         super().__init__(pos, groups, player_instance, spritesheet, collision_sprites, hpgroup, speed)
         self.player = player_instance
         self.notice_range = pygame.Rect(pos[0] - detection_range, pos[1] - detection_range, detection_range * 2, detection_range * 2)
         self.range = range 
+        self.attack_range = pygame.Rect(self.rect.center[0]-range,self.rect.center[1]-range , range * 2, range * 2)
         self.change_direction_timer = random.randint(30, 50)
         self.timer_counter=0
-        self.pause_counter = 0
-    
+        self.attack_counter = 0
     def pursue(self,dt):
         dx = self.player.hitbox.centerx - self.hitbox.centerx
         dy = self.player.hitbox.centery - self.hitbox.centery
@@ -470,7 +558,7 @@ class EnemyMelee(Enemy):
                 self.timer_counter = 0
                 self.is_paused = True 
                 self.direction = movement_vector
-
+       
 
             original_position = vector(self.hitbox.topleft)
             
@@ -485,13 +573,22 @@ class EnemyMelee(Enemy):
 
             # Align the visual rectangle with the hitbox
             self.rect.center = (self.hitbox.centerx, self.hitbox.centery - 8)
-   
+
+        self.attack_counter+=0.1
+        if self.attack_counter >= self.attack_speed:
+            self.attack_counter = 0  # Reset the attack counter
+
+            # Check if the player is within the attack range
+            if self.attack_range.colliderect(self.player.hitbox):
+                self.player.take_damage(self.ATK)
+
+        self.attack_range.center = self.hitbox.center
         self.notice_range.center = self.hitbox.center
 
 class BrittleArcher(EnemyRanged):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=300):
         super().__init__(pos, groups, player_instance, spritesheets["brittle_arch"], 
-        collision_sprites,hpgroup, 60, speed)
+        collision_sprites,hpgroup, speed)
         self.exp_value = 4*difficulty
         self.ATK = 10 * difficulty
         self.HP = 50 * difficulty
@@ -500,7 +597,7 @@ class BrittleArcher(EnemyRanged):
 class GhastlyEye(EnemyRanged):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=200):
         super().__init__(pos, groups, player_instance, spritesheets["ghast"], 
-        collision_sprites,hpgroup, 10, speed)
+        collision_sprites,hpgroup, 80, speed)
         self.exp_value = 5*difficulty
         self.projectile_speed=700
         self.attack_speed=4
@@ -511,8 +608,9 @@ class GhastlyEye(EnemyRanged):
 class ToxicHound(EnemyMelee):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=100):
         super().__init__(pos, groups, player_instance, spritesheets["toxic_hound"], 
-        collision_sprites,hpgroup,200, speed)
+        collision_sprites,hpgroup,200, 20,speed)
         self.exp_value = 8*difficulty
+        self.attack_speed=7
         self.ATK = 10 * difficulty
         self.HP = 80 * difficulty
         self.MAXHP = 70 * difficulty
@@ -520,8 +618,9 @@ class ToxicHound(EnemyMelee):
 class NormalZomb(EnemyMelee):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=50):
         super().__init__(pos, groups, player_instance, spritesheets["zomb"], 
-        collision_sprites,hpgroup, 200, speed)
+        collision_sprites,hpgroup, 200, 30, speed)
         self.exp_value = 5*difficulty
+        self.attack_speed=10
         self.ATK = 15 * difficulty
         self.HP = 70 * difficulty
         self.MAXHP = 70 * difficulty
@@ -529,8 +628,9 @@ class NormalZomb(EnemyMelee):
 class DismemberedCrawler(EnemyMelee):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=25):
         super().__init__(pos, groups, player_instance, spritesheets["crawler"], 
-        collision_sprites,hpgroup,200, speed)
+        collision_sprites,hpgroup,200, 10, speed)
         self.exp_value = 2*difficulty
+        self.attack_speed=20
         self.ATK = 7 * difficulty
         self.HP = 40 * difficulty
         self.MAXHP = 40 * difficulty
@@ -538,8 +638,9 @@ class DismemberedCrawler(EnemyMelee):
 class Slime(EnemyMelee):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=10):
         super().__init__(pos, groups, player_instance, spritesheets["slime"], 
-        collision_sprites,hpgroup,200, speed)
+        collision_sprites,hpgroup,200, 10, speed)
         self.exp_value = 2*difficulty
+        self.attack_speed=15
         self.ATK = 5 * difficulty
         self.HP = 120 * difficulty
         self.MAXHP = 50 * difficulty

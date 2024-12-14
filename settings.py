@@ -6,7 +6,10 @@ from pytmx.util_pygame import load_pygame
 
 WIDTH, HEIGHT = 1280, 720
 TILE_SIZE = 64
-ANIMATION_SPEED = 6
 
+diffculty_modifier = 0.15 
 difficulty = 1
+upgrade_value = 1.1
+rooms_cleared = 0
 
+playing = True

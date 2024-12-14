@@ -13,7 +13,7 @@ class Player(pygame.sprite.Sprite):
 		self.health_ratio = self.max_health / self.health_bar_length
 		self.health_change_speed = 10
 
-        # Load the background image
+		# Load the background image
 		self.health_bar_background = pygame.image.load('./assets/player_stats_bg.png').convert()
 		self.health_bar_background = pygame.transform.scale(self.health_bar_background, (384, 240))
 
@@ -37,7 +37,7 @@ class Player(pygame.sprite.Sprite):
 		pygame.draw.rect(screen,(255,255,255),(10,10,self.health_bar_length,25),4)
 
 	def advanced_health(self):
-        # Draw the background image for the health bar
+		# Draw the background image for the health bar
 		screen.blit(self.health_bar_background, (10, -15))
 		transition_width = 0
 		transition_color = (255,0,0)
