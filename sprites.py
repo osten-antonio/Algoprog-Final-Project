@@ -82,7 +82,6 @@ class DamageNumber(pygame.sprite.Sprite):
         self.image.set_alpha(max(0, int(self.alpha)))
 
 class projectile(pygame.sprite.Sprite): # TODO test this
-    
     def __init__(self, instance, damage, pos, angle, 
                  groups, spritesheet , collision_sprite, speed,
                    width, height, frames, size):
@@ -104,6 +103,8 @@ class projectile(pygame.sprite.Sprite): # TODO test this
         self.pos = pos
         self.angle = angle
         self.direction = vector(cos(angle),sin(angle))
+    def take_damage(*args,**kwargs):
+        pass
     def update(self, dt, *args, **kwargs):
         # Ensure direction is a pygame vector
         if not isinstance(self.direction, pygame.math.Vector2):
@@ -124,15 +125,15 @@ class projectile(pygame.sprite.Sprite): # TODO test this
         if isinstance(self.instance,pygame.sprite.Group):
             for sprite in self.instance:
                 if self.hitbox.colliderect(sprite.hitbox):
-                    # Damage enemy
+                    sprite.take_damage(self.damage)
                     print("HIt enemy")
                     self.kill()  # Remove the projectile
                     pass
         else:
             if self.hitbox.colliderect(self.instance.hitbox):
-                # self.player.HP -= self.damage  # Decrease player HP on hit
+                self.instance.take_damage(self.damage)
                 self.kill()  # Remove the projectile
-                pass
+                
 
 
 class HPBar(pygame.sprite.Sprite):
@@ -151,10 +152,11 @@ class HPBar(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()  
 
     def update(self, *args, **kwargs):
+        # print("Take damage")
         self.rect.midbottom = self.enemy.rect.midtop 
         self.rect.y -= 10 
     
-        health_percentage = max(self.enemy.HP / self.enemy.MAXHP, 0)  
+        health_percentage = max(self.enemy.HP / self.enemy.MAXHP,0)  
         if health_percentage <=0:
             self.kill()
         current_health_width = int(self.width * health_percentage)
@@ -172,6 +174,7 @@ class HPBar(pygame.sprite.Sprite):
 class PlayerStats(pygame.sprite.Sprite):
     def __init__(self,player_instance):
         super().__init__()
+        self.player= player_instance
         self.current_health = player_instance.current_health
         self.target_health = player_instance.target_health
         self.max_health = player_instance.max_health
@@ -208,13 +211,13 @@ class PlayerStats(pygame.sprite.Sprite):
 
     def update(self, *args , **kwargs):
         # Draw the background image for the health bar
+        self.exp = self.player.current_exp
         transition_width = 0
-        transition_color = (255,0,0)
-
+        self.current_health = self.player.current_health
+        self.target_health = self.player.target_health
         if self.current_health < self.target_health:
             self.current_health += self.health_change_speed
             transition_width = int((self.target_health - self.current_health) / self.health_ratio)
-            transition_color = (0,255,0)
 
         if self.current_health > self.target_health:
             self.current_health -= self.health_change_speed 

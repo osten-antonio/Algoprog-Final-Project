@@ -231,12 +231,11 @@ class Level:
             # pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
         for sprite in self.enemy_group:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
-            pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
-            # pygame.draw.rect(self.display_surface, "red", sprite.attack_range.move(camera_offset), 2)
+            # pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
 
-        pygame.draw.rect(self.display_surface, "green", self.player.swing.rect.move(camera_offset), 2)
-        pygame.draw.rect(self.display_surface, "red", self.player.hitbox.move(camera_offset), 2)  # Player hitbox
-        pygame.draw.rect(self.display_surface, "blue", self.player.rect.move(camera_offset), 2)  # Player image rect
+        # pygame.draw.rect(self.display_surface, "green", self.player.swing.rect.move(camera_offset), 2)
+        # pygame.draw.rect(self.display_surface, "red", self.player.hitbox.move(camera_offset), 2)  # Player hitbox
+        # pygame.draw.rect(self.display_surface, "blue", self.player.rect.move(camera_offset), 2)  # Player image rect
         for room_key, room in self.rooms.items():
             pygame.draw.rect(self.display_surface, (255, 0, 0), room.rect.move(camera_offset), 2)  # Room bounding boxes
         for sprite in self.damage_sprite:
