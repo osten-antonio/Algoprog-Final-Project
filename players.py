@@ -18,7 +18,7 @@ spritesheets = {
     "brittle_arch": pygame.image.load("./Assets/First/BrittleArcher.png"),
     "slime":  pygame.image.load("./Assets/First/DeathSlime.png"),
     "blinded_grimlock":  pygame.image.load("./Assets/First/BlindedGrimlock.png"),
-    "ToxicHound":  pygame.image.load("./Assets/First/ToxicHound.png"),
+    "toxichound":  pygame.image.load("./Assets/First/ToxicHound.png"),
     "crawler":  pygame.image.load("./Assets/First/DismemberedCrawler.png"),
     "ghast":  pygame.image.load("./Assets/First/GhastlyEye.png"),
     "zomb":  pygame.image.load("./Assets/First/MutilatedStumbler.png"),
