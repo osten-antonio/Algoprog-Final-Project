@@ -25,7 +25,8 @@ class PlayerSwing(pygame.sprite.Sprite):
         self.player = player
         self.rect = pygame.FRect((self.player.hitbox.center), (self.range,self.range))
         self.angle = 90
-
+        self.image = pygame.image.load('./assets/direction/direction90.png')
+        self.image = pygame.transform.scale(self.image,(64,64))
     def update(self, *args, **kwargs):
         # Update the swing rectangle to follow the player
         direction = self.player.direction
@@ -42,23 +43,40 @@ class PlayerSwing(pygame.sprite.Sprite):
         if self.angle == 0:
             self.rect.top=self.player.hitbox.centery
             self.rect.centerx=self.player.hitbox.centerx
+            self.image = pygame.image.load('./assets/direction/direction0.png')
+            self.image = pygame.transform.scale(self.image,(64,64))
         if self.angle == 90:
             self.rect.centery=self.player.hitbox.centery
             self.rect.left=self.player.hitbox.centerx
+            self.image = pygame.image.load('./assets/direction/direction90.png')
+            self.image = pygame.transform.scale(self.image,(64,64))
         if self.angle == 270:
             self.rect.centery=self.player.hitbox.centery
             self.rect.right=self.player.hitbox.centerx
+            self.image = pygame.image.load('./assets/direction/direction270.png')
+            self.image = pygame.transform.scale(self.image,(64,64))
         if self.angle == 180:
             self.rect.centerx=self.player.hitbox.centerx
             self.rect.bottom=self.player.hitbox.centery
+            self.image = pygame.image.load('./assets/direction/direction180.png')
+            self.image = pygame.transform.scale(self.image,(64,64))
         if self.angle == 45: # bottom left
             self.rect.topleft = self.player.hitbox.center
+            self.image = pygame.image.load('./assets/direction/direction45.png')
+            self.image = pygame.transform.scale(self.image,(64,64))
         if self.angle == 135: # Top right
             self.rect.bottomleft = self.player.hitbox.center
+            self.image = pygame.image.load('./assets/direction/direction135.png')
+            self.image = pygame.transform.scale(self.image,(64,64))
         if self.angle == 225: # Top left
             self.rect.bottomright = self.player.hitbox.center
+            self.image = pygame.image.load('./assets/direction/direction225.png')
+            self.image = pygame.transform.scale(self.image,(64,64))
         if self.angle == 315: # Bottom right
             self.rect.topright = self.player.hitbox.center
+            self.image = pygame.image.load('./assets/direction/direction315.png')
+            self.image = pygame.transform.scale(self.image,(64,64))
+        self.image.set_alpha(128)
         # self.rect.top=self.player.rect.top
 
 class DamageNumber(pygame.sprite.Sprite):
@@ -81,13 +99,13 @@ class DamageNumber(pygame.sprite.Sprite):
             self.kill()  
         self.image.set_alpha(max(0, int(self.alpha)))
 
-class projectile(pygame.sprite.Sprite): # TODO test this
+class projectile(pygame.sprite.Sprite): 
     def __init__(self, instance, damage, pos, angle, 
                  groups, spritesheet , collision_sprite, speed,
                    width, height, frames, size):
         super().__init__(groups)
         self.instance = instance
-        self.damage = damage # PLS INPUT USING DAMAGE CALCULATION LATER
+        self.damage = damage
         self.spritesheet  = spritesheet
         self.speed = speed
         self.angle = angle
@@ -106,11 +124,9 @@ class projectile(pygame.sprite.Sprite): # TODO test this
     def take_damage(*args,**kwargs):
         pass
     def update(self, dt, *args, **kwargs):
-        # Ensure direction is a pygame vector
-        if not isinstance(self.direction, pygame.math.Vector2):
-            self.direction = pygame.math.Vector2(self.direction)
+        self.direction = pygame.math.Vector2(self.direction)
 
-        # Move the projectile based on its direction and speed (scale by dt for frame-rate independence)
+        # Move the projectile based on its direction and speed 
         movement = self.direction * self.speed * dt
 
         self.hitbox.center += movement
@@ -121,7 +137,7 @@ class projectile(pygame.sprite.Sprite): # TODO test this
             if self.hitbox.colliderect(sprite.rect):
                 self.kill()  # Remove the projectile on collision
 
-        # Check for collision with the player
+        # Check for collision with the player or enemy
         if isinstance(self.instance,pygame.sprite.Group):
             for sprite in self.instance:
                 if self.hitbox.colliderect(sprite.hitbox):

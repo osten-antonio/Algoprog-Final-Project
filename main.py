@@ -25,7 +25,7 @@ class Game:
         }
         self.stage = Level(load_pygame('./Rooms/Level 1/start.tmx'))
     def run(self):
-        while self.stage.player.alive:
+        while self.stage.player.alive and player_difficulty.playing:
             dt = self.clock.tick() / 1000
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

@@ -142,6 +142,7 @@ class Player(pygame.sprite.Sprite):
 
 
     def input(self):
+        pause_screen=pause
         keys = pygame.key.get_pressed()
         keybinds=[
             pygame.K_RIGHT,pygame.K_LEFT,pygame.K_UP,pygame.K_DOWN
@@ -165,6 +166,8 @@ class Player(pygame.sprite.Sprite):
             self.current_state = "attack" 
         if keys[pygame.K_z]:
             self.bow()
+        if keys[pygame.K_ESCAPE]:
+            pause_screen(self)
         if keys[pygame.K_SPACE]:
             if self.dash_counter >= self.dash_timer:
                 self.dash_counter=0
@@ -256,14 +259,14 @@ class Player(pygame.sprite.Sprite):
                 gameOverScreen()
 
     def level_up(self):
+        player_difficulty.player_level += self.level
         stats = {
-            'attack': self.attack_damage,
             'attack_speed': self.attack_speed,
             'max HP': self.max_health,
             'attack_damage': self.attack_damage,
             'defence': self.defence
         }
-        stats_name = ['attack', 'attack_speed', 'max HP', 'attack_damage','defence']
+        stats_name = ['attack_speed', 'max HP', 'attack_damage','defence']
 
         upgraded = []
         for i in range(3):
@@ -271,7 +274,7 @@ class Player(pygame.sprite.Sprite):
             setattr(self, stat_name,stats[stat_name]*1.1 )
             upgraded.append(stat_name)
         
-        self.upgradeText = sp.UpgradeText(f"Your {upgraded[0]}, {upgraded[1]}, and {upgraded[2]} got upgrade by {upgrade_value}x!")
+        self.upgradeText = sp.UpgradeText(f"Your {upgraded[0]}, {upgraded[1]}, and {upgraded[2]} got upgrade by {player_difficulty.upgrade_value}x!")
     
     def update(self, dt):
         self.dash_counter+=0.01
@@ -383,7 +386,6 @@ class Enemy(pygame.sprite.Sprite):
                     self.velocity.y = 0
 
     def update(self, *args, **kwargs):
-        print(self.HP)
         self.HPBAR.update()
         self.current_frame += self.animation_speed
         if self.current_frame >= len(self.frames):
@@ -588,69 +590,76 @@ class EnemyMelee(Enemy):
 class BrittleArcher(EnemyRanged):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=300):
         super().__init__(pos, groups, player_instance, spritesheets["brittle_arch"], 
-        collision_sprites,hpgroup, speed)
-        self.exp_value = 4*difficulty
-        self.ATK = 10 * difficulty
-        self.HP = 50 * difficulty
-        self.MAXHP = 50 * difficulty
+        collision_sprites,hpgroup,200, speed)
+        global difficulty
+        self.exp_value = 4*player_difficulty.difficulty
+        self.ATK = 10 * player_difficulty.difficulty
+        self.HP = 50 * player_difficulty.difficulty
+        self.MAXHP = 50 * player_difficulty.difficulty
 
 class GhastlyEye(EnemyRanged):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=200):
         super().__init__(pos, groups, player_instance, spritesheets["ghast"], 
         collision_sprites,hpgroup, 80, speed)
-        self.exp_value = 5*difficulty
+        global difficulty
+        self.exp_value = 5*player_difficulty.difficulty
         self.projectile_speed=700
         self.attack_speed=4
-        self.ATK = 1 * difficulty
-        self.HP = 2 * difficulty
-        self.MAXHP = 2 * difficulty
+        self.ATK = 1 * player_difficulty.difficulty
+        self.HP = 2 * player_difficulty.difficulty
+        self.MAXHP = 2 * player_difficulty.difficulty
 
 class ToxicHound(EnemyMelee):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=100):
         super().__init__(pos, groups, player_instance, spritesheets["toxic_hound"], 
         collision_sprites,hpgroup,200, 20,speed)
-        self.exp_value = 8*difficulty
+        global difficulty
+        self.exp_value = 8*player_difficulty.difficulty
         self.attack_speed=7
-        self.ATK = 10 * difficulty
-        self.HP = 80 * difficulty
-        self.MAXHP = 70 * difficulty
+        self.ATK = 10 * player_difficulty.difficulty
+        self.HP = 80 * player_difficulty.difficulty
+        self.MAXHP = 70 * player_difficulty.difficulty
 
 class NormalZomb(EnemyMelee):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=50):
         super().__init__(pos, groups, player_instance, spritesheets["zomb"], 
         collision_sprites,hpgroup, 200, 30, speed)
-        self.exp_value = 5*difficulty
+        global difficulty
+        self.exp_value = 5*player_difficulty.difficulty
         self.attack_speed=10
-        self.ATK = 15 * difficulty
-        self.HP = 70 * difficulty
-        self.MAXHP = 70 * difficulty
+        self.ATK = 15 * player_difficulty.difficulty
+        self.HP = 70 * player_difficulty.difficulty
+        self.MAXHP = 70 * player_difficulty.difficulty
 
 class DismemberedCrawler(EnemyMelee):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=25):
         super().__init__(pos, groups, player_instance, spritesheets["crawler"], 
         collision_sprites,hpgroup,200, 10, speed)
-        self.exp_value = 2*difficulty
+        global difficulty
+        self.exp_value = 2*player_difficulty.difficulty
         self.attack_speed=20
-        self.ATK = 7 * difficulty
-        self.HP = 40 * difficulty
-        self.MAXHP = 40 * difficulty
+        self.ATK = 7 * player_difficulty.difficulty
+        self.HP = 40 * player_difficulty.difficulty
+        self.MAXHP = 40 * player_difficulty.difficulty
 
 class Slime(EnemyMelee):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=10):
         super().__init__(pos, groups, player_instance, spritesheets["slime"], 
         collision_sprites,hpgroup,200, 10, speed)
-        self.exp_value = 2*difficulty
+        global difficulty
+        self.exp_value = 2*player_difficulty.difficulty
         self.attack_speed=15
-        self.ATK = 5 * difficulty
-        self.HP = 120 * difficulty
-        self.MAXHP = 50 * difficulty
+        self.ATK = 5 * player_difficulty.difficulty
+        self.HP = 120 * player_difficulty.difficulty
+        self.MAXHP = 50 * player_difficulty.difficulty
 
 class BlindedGrimlock(EnemyRanged):
     def __init__(self, pos,groups,player_instance ,collision_sprites,hpgroup,speed=250):
         super().__init__(pos, groups, player_instance, spritesheets["blinded_grimlock"], 
         collision_sprites,hpgroup, 200, speed)
-        self.exp_value = 5*difficulty
+        global difficulty
+        self.exp_value = 5*player_difficulty.difficulty
         self.attack_speed=10
-        self.ATK = 20 * difficulty
-        self.HP = 80 * difficulty
-        self.MAXHP = 80 * difficulty
+        self.ATK = 20 * player_difficulty.difficulty
+        self.HP = 80 * player_difficulty.difficulty
+        self.MAXHP = 80 * player_difficulty.difficulty

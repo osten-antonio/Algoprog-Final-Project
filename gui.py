@@ -20,20 +20,47 @@ class gameOverScreen():
     def __init__(self):
         self.font_name_input = pygame.font.Font(None, 28)
         self.name_input = ''
+        total_score = player_difficulty.rooms_cleared*player_difficulty.difficulty * player_difficulty.player_level
+        player_difficulty.playing = False
+
+        with open("player_data.json", "r") as file:
+            data_read = json.load(file)
+            score = data_read.get('total_score', 0)
+            upgrades = {
+                'ATK': data_read.get('ATK', 0),
+                'HP': data_read.get('HP', 0),
+                'DEF': data_read.get('DEF', 0),
+                'SPEED': data_read.get('SPEED', 0)
+            }
+            current_class = data_read.get('selected_class', 0)
+
+        data = {
+            "total_score":score + total_score,
+            "selected_class": current_class,
+            "ATK":upgrades["ATK"],
+            "HP":upgrades["HP"],
+            "DEF":upgrades["DEF"],
+            "SPEED":upgrades["SPEED"],
+        }
+        with open("player_data.json", "w") as file:
+            json.dump(data, file)
+
         self.run()
+        
 
     def read_leaderboard(self):
         df = pd.read_csv(leaderboard_path)
         df_sorted = df.sort_values(by='ROOMS_CLEARED', ascending=False)
         return df_sorted.head(10)
 
-    def handle_new_score(self,player_score=10, player_level=10, player_name=''):
+    def handle_new_score(self, player_name=''):
+        player_score = player_difficulty.rooms_cleared*player_difficulty.difficulty
+        player_level = player_difficulty.player_level
         df = pd.read_csv(leaderboard_path)
         df_sorted = df.sort_values(by='ROOMS_CLEARED', ascending=False)
         leaderboard = df_sorted.head(10)
         
         if len(leaderboard) < 10 or player_score > leaderboard.iloc[-1]['ROOMS_CLEARED']:
-
             new_entry = pd.DataFrame({
                 'NAME': [player_name],
                 'LEVEL': [player_level],
@@ -44,23 +71,25 @@ class gameOverScreen():
             leaderboard = leaderboard.sort_values(by='ROOMS_CLEARED', ascending=False).head(10)
 
             leaderboard.to_csv(leaderboard_path, index=False)
+        print("SAved")
 
     def draw_leaderboard(self):
         leaderboard = self.read_leaderboard()
         leaderboard_y = HEIGHT // 2 + 150  
         for i, row in leaderboard.iterrows():
-            player_text = font.render(f"{i+1}. {row['NAME']} - Level {row['LEVEL']} - Rooms Cleared: {row['ROOMS_CLEARED']}", True, 'white')
+            player_text = font.render(f"{i+1}. {row['NAME']} - Level {row['LEVEL']} - Score: {row['ROOMS_CLEARED']}", True, 'white')
             screen.blit(player_text, (WIDTH // 2 - player_text.get_width() // 2, leaderboard_y + i * 30))
 
         name_input_text = self.font_name_input.render(f"Enter your name: {self.name_input}", True, 'white')
         screen.blit(name_input_text, (WIDTH // 2 - name_input_text.get_width() // 2, HEIGHT // 2 + 120))
         return name_input_text
 
-    def run(self, player_score=10, player_level=10):
+    def run(self):
         input_active = True
         cursor_visible = True
         cursor_timer = pygame.time.get_ticks()
-
+        player_score = player_difficulty.rooms_cleared* player_difficulty.difficulty
+        player_level = player_difficulty.player_level
         while True:
             screen.fill('black')
 
@@ -96,12 +125,12 @@ class gameOverScreen():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
                         if self.name_input != '':
-                            self.handle_new_score(player_score, player_level, self.name_input)
+                            self.handle_new_score(self.name_input)
                             mainMenu()
                         
                     elif event.key == pygame.K_r:
                         if self.name_input != '':
-                            self.handle_new_score(player_score, player_level, self.name_input)
+                            self.handle_new_score(self.name_input)
                             
                             from main import Game
                             game = Game()
@@ -109,7 +138,7 @@ class gameOverScreen():
                         
                     elif event.key == pygame.K_q:
                         if self.name_input != '':
-                            self.handle_new_score(player_score, player_level, self.name_input)
+                            self.handle_new_score(self.name_input)
                             pygame.quit()                        
 
                     elif event.key == pygame.K_BACKSPACE:
@@ -180,6 +209,46 @@ class Button():
 # Fonts and colors
 def get_font(size):
     return pygame.font.Font(None, size)
+
+def pause(player_instance):
+        main_menu = mainMenu
+        PLAY_BUTTON = Button(image=pygame.image.load("./assets/button.png"), pos=(640, 250), 
+                             text_input="PLAY", font=get_font(75), base_color="#d7fcd4", hovering_color='white', height=100)
+        MAIN_MENU = Button(image=pygame.image.load("./assets/button.png"), pos=(640, 400), 
+                    text_input="MAIN MENU", font=get_font(75), base_color="#d7fcd4", hovering_color='white', height=100)
+        QUIT_BUTTON = Button(image=pygame.image.load("./assets/button.png"), pos=(640, 550), 
+                        text_input="QUIT", font=get_font(75), base_color="#d7fcd4", hovering_color='white', height=100)
+        paused = True
+        while paused:
+            MENU_MOUSE_POS = pygame.mouse.get_pos()
+
+            for button in [PLAY_BUTTON,MAIN_MENU,QUIT_BUTTON]:
+                if button.checkForInput(MENU_MOUSE_POS): # Checks if the pointer is hovering over the button
+                    button.changeColor(MENU_MOUSE_POS)  # Update the button's color based on selection
+                else:
+                    button.changeColor(False)  # Revert to base color if not hovered
+                button.update(screen)
+            for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
+                        paused=False
+                    if MAIN_MENU.checkForInput(MENU_MOUSE_POS):
+                        player_difficulty.playing = False
+                        main_menu()
+                    if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
+                        pygame.quit()
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+
+            PAUSE_TEXT = get_font(100).render("PAUSE", True, "white")
+            PAUSE_RECT = PAUSE_TEXT.get_rect(center=(640, 100))
+            screen.blit(PAUSE_TEXT, PAUSE_RECT)
+
+            stats_surface = get_font(30).render(f"ATK: {player_instance.attack_damage} DEF: {player_instance.defence} SPD: {player_instance.attack_speed} HP: {player_instance.max_health}", True, "white")
+            stats_rect = stats_surface.get_rect(bottomleft=(10, screen.get_height() - 10))
+            screen.blit(stats_surface, stats_rect)
+                
+            pygame.display.update()
 
 
 class mainMenu():
@@ -349,26 +418,35 @@ class mainMenu():
 
                     if difficulty_1_button.checkForInput(OPTIONS_MOUSE_POS):
                         from main import Game
-
-                        diffculty_modifier = 0.1
-                        difficulty = 0.5
+                        player_difficulty.playing = True
+                        self.rooms_cleared = 0
+                        self.player_level = 1
+                        self.upgrade_value = 1.05
+                        player_difficulty.diffculty_modifier = 0.1
+                        player_difficulty.difficulty = 0.5
                         game = Game()
                         game.run()
                         
                     
                     if difficulty_2_button.checkForInput(OPTIONS_MOUSE_POS):
                         from main import Game
-
-                        diffculty_modifier = 0.15
-                        difficulty = 1
+                        player_difficulty.playing = True
+                        self.rooms_cleared = 0
+                        self.player_level = 1
+                        self.upgrade_value = 1.1
+                        player_difficulty.diffculty_modifier = 0.15
+                        player_difficulty.difficulty = 1
                         game = Game()
                         game.run()
 
                     if difficulty_3_button.checkForInput(OPTIONS_MOUSE_POS):
                         from main import Game
-
-                        diffculty_modifier = 0.3
-                        difficulty = 1.3
+                        player_difficulty.playing = True
+                        self.rooms_cleared = 0
+                        self.player_level = 1
+                        self.upgrade_value = 1.2
+                        player_difficulty.diffculty_modifier = 0.3
+                        player_difficulty.difficulty = 1.3
                         game = Game()
                         game.run()
 
@@ -468,7 +546,7 @@ class mainMenu():
             leaderboard = df_sorted
             leaderboard_y = 150
             for i, row in leaderboard.iterrows():
-                player_text = font.render(f"{i+1}. {row['NAME']} - Level {row['LEVEL']} - Rooms Cleared: {row['ROOMS_CLEARED']}", True, WHITE)
+                player_text = font.render(f"{i+1}. {row['NAME']} - Level {row['LEVEL']} - Score: {row['ROOMS_CLEARED']}", True, 'white')
                 screen.blit(player_text, (WIDTH // 2 - player_text.get_width() // 2, leaderboard_y + i * 30))
 
                         # Back button

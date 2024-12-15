@@ -10,7 +10,7 @@ class Level:
 
         # Groups for different types of objects
         self.all_sprites = pygame.sprite.Group()
-        self.damage_sprite = pygame.sprite.Group()
+        self.damage_sprite = pygame.sprite.Group() # Damage numbers
         self.collision_sprites = pygame.sprite.Group()
         self.enemy_group = pygame.sprite.Group()
         self.player_skill = pygame.sprite.Group()
@@ -19,7 +19,7 @@ class Level:
         self.spawn_borders_group = pygame.sprite.Group()
         self.rooms = defaultdict(pygame.sprite.Sprite)
         self.current_room = [0, 0]
-
+        self.cleared_rooms = []
         self.visited_room = []
         self.enemy_classes = [BrittleArcher, GhastlyEye, ToxicHound, NormalZomb, DismemberedCrawler, Slime, BlindedGrimlock]
 
@@ -76,7 +76,7 @@ class Level:
             109: load_pygame('./Rooms/Level 1/09.tmx'),
             110: load_pygame('./Rooms/Level 1/10.tmx'),
         }
-        # TODO: Implement level system later
+        
         chosen=random.randint(101,110)
         chosen_room=possible_rooms[chosen]
         for x, y, surf in chosen_room.get_layer_by_name('Water').tiles():
@@ -144,7 +144,6 @@ class Level:
                 self.spawned_enemies.append(chosen_enemy_class((x, y), self.all_sprites, self.player, self.collision_sprites, self.damage_sprite, self.hpbar))
                 self.spawned_enemies_pos.append(pygame.Rect(x, y, TILE_SIZE, TILE_SIZE))
 
-                # self.all_sprites.add(enemy)
             for i in self.spawned_enemies:
                 i.add(self.enemy_group)
 
@@ -156,12 +155,10 @@ class Level:
     def run(self, dt):
         # Calculate the camera offset
         camera_offset = vector(WIDTH // 2 - self.player.hitbox.centerx, HEIGHT // 2 - self.player.hitbox.centery)
-        self.display_surface.fill((0, 0, 0)) 
-        # Update all sprites
+        self.display_surface.fill('black') 
         
         self.all_sprites.update(dt)
         self.damage_sprite.update(dt)
-
 
         # Room boundary
         current_room_key = str(self.current_room)
@@ -200,6 +197,7 @@ class Level:
         for sprite in self.layers['decorations']:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
 
+        self.display_surface.blit(self.player.swing.image,self.player.swing.rect.topleft+camera_offset)
         self.display_surface.blit(self.player.image, (WIDTH // 2 - self.player.rect.width // 2, HEIGHT // 2 - self.player.rect.height // 2))
         
         for sprite in self.layers['walls']:
@@ -210,15 +208,14 @@ class Level:
         for sprite in self.layers['spawn_border']:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
 
-        for enemy_rect in self.spawned_enemies_pos: # Spawned enemies
-            pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
 
-        if not self.enemy_group and current_room_key!="(0,0)" and current_room_key in self.visited_room: # Checks if there is enemy remaining
-            global rooms_cleared, difficulty, diffculty_modifier
-            rooms_cleared += 1
-            print(rooms_cleared)
 
-            difficulty += diffculty_modifier
+        if not self.enemy_group and current_room_key not in self.cleared_rooms: # Checks if there is enemy remaining
+            player_difficulty.rooms_cleared += 1
+            self.cleared_rooms.append(current_room_key)
+            
+            player_difficulty.difficulty += player_difficulty.diffculty_modifier
+            
             for wall in self.spawn_borders_group:
                 wall.kill()
                 self.spawned_enemies_pos = []
@@ -230,20 +227,22 @@ class Level:
         self.player_skill.update(dt)
         for sprite in self.player_skill:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
-            # pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
+           
         for sprite in self.enemy_group:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
-            try:    
-                pygame.draw.rect(self.display_surface, "red", sprite.attack_range.move(camera_offset), 2)
-            except:
-                pass
-            # pygame.draw.rect(self.display_surface, "red", sprite.hitbox.move(camera_offset), 2)
+
+            # Attack range
+            # pygame.draw.rect(self.display_surface, "red", sprite.attack_range.move(camera_offset), 2) 
+
+        # DEBUG BOXES
 
         # pygame.draw.rect(self.display_surface, "green", self.player.swing.rect.move(camera_offset), 2)
         # pygame.draw.rect(self.display_surface, "red", self.player.hitbox.move(camera_offset), 2)  # Player hitbox
         # pygame.draw.rect(self.display_surface, "blue", self.player.rect.move(camera_offset), 2)  # Player image rect
-        for room_key, room in self.rooms.items():
-            pygame.draw.rect(self.display_surface, (255, 0, 0), room.rect.move(camera_offset), 2)  # Room bounding boxes
+        # for enemy_rect in self.spawned_enemies_pos: # Spawned enemies
+        #     pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
+        # for room_key, room in self.rooms.items():
+        #     pygame.draw.rect(self.display_surface, (255, 0, 0), room.rect.move(camera_offset), 2)  # Room bounding boxes
         for sprite in self.damage_sprite:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
 
@@ -265,3 +264,6 @@ class Level:
         # Upgrade text
         self.display_surface.blit((self.player.upgradeText.text), (10, HEIGHT-40))
 
+        current_room_text = pygame.font.SysFont('arial', 20, bold=True).render(current_room_key, True, (255, 255, 255))
+        current_room_rect = current_room_text.get_rect(center=(WIDTH // 2, HEIGHT - 30))
+        self.display_surface.blit(current_room_text, current_room_rect)
