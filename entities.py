@@ -400,7 +400,7 @@ class Enemy(pygame.sprite.Sprite):
 
         self.image = pygame.transform.flip(cur_frame, True, False) if self.flipped else cur_frame
 
-    def take_damage(self, damage): # TODO
+    def take_damage(self, damage): 
         self.HP -= damage
         sp.DamageNumber(self.rect.center, self.player.attack_damage, self.damage_sprite) # Use the center of the enemy rect for the position
         
@@ -408,7 +408,7 @@ class Enemy(pygame.sprite.Sprite):
             self.dead()
 
     def dead(self):
-        if random.random() < 0.5:
+        if random.random() < (0.7 if self.player.selected_class[0] == 'warrior' else 0.5):
             self.player.target_health += self.player.max_health * 0.07
             if self.player.target_health > self.player.max_health:
                 self.player.target_health = self.player.max_health

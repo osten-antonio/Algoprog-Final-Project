@@ -200,6 +200,15 @@ class Level:
         self.display_surface.blit(self.player.swing.image,self.player.swing.rect.topleft+camera_offset)
         self.display_surface.blit(self.player.image, (WIDTH // 2 - self.player.rect.width // 2, HEIGHT // 2 - self.player.rect.height // 2))
         
+
+        for sprite in self.enemy_group:
+            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
+
+            # Attack range
+            # pygame.draw.rect(self.display_surface, "red", sprite.attack_range.move(camera_offset), 2) 
+
+
+
         for sprite in self.layers['walls']:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
         for sprite in self.layers['decorations2']:
@@ -228,21 +237,16 @@ class Level:
         for sprite in self.player_skill:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
            
-        for sprite in self.enemy_group:
-            self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
-
-            # Attack range
-            # pygame.draw.rect(self.display_surface, "red", sprite.attack_range.move(camera_offset), 2) 
 
         # DEBUG BOXES
 
         # pygame.draw.rect(self.display_surface, "green", self.player.swing.rect.move(camera_offset), 2)
         # pygame.draw.rect(self.display_surface, "red", self.player.hitbox.move(camera_offset), 2)  # Player hitbox
         # pygame.draw.rect(self.display_surface, "blue", self.player.rect.move(camera_offset), 2)  # Player image rect
-        # for enemy_rect in self.spawned_enemies_pos: # Spawned enemies
-        #     pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
-        # for room_key, room in self.rooms.items():
-        #     pygame.draw.rect(self.display_surface, (255, 0, 0), room.rect.move(camera_offset), 2)  # Room bounding boxes
+        for enemy_rect in self.spawned_enemies_pos: # Spawned enemies
+            pygame.draw.rect(self.display_surface, "green", enemy_rect.move(camera_offset), 2)
+        for room_key, room in self.rooms.items():
+            pygame.draw.rect(self.display_surface, (255, 0, 0), room.rect.move(camera_offset), 2)  # Room bounding boxes
         for sprite in self.damage_sprite:
             self.display_surface.blit(sprite.image, sprite.rect.topleft + camera_offset)
 

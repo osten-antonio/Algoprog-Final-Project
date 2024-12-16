@@ -35,8 +35,5 @@ class Game:
             self.stage.run(dt)
             pygame.display.update()
 
-        
-
 if __name__ == '__main__':
     game = mainMenu()
-    

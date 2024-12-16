@@ -97,11 +97,11 @@ class gameOverScreen():
             game_over_text = font.render("GAME OVER", True, 'red')
             score_text = font.render(f"Your Score: {player_score}", True, 'white')
             continue_text = font.render("Press Space to continue", True, 'white')
-            restart_text = font.render("Press R to Restart or Q to Quit", True, 'white')
+            # restart_text = font.render("Press R to Restart or Q to Quit", True, 'white')
 
             screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 3))
             screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, HEIGHT // 2 + 40))
-            screen.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2))
+            # screen.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2))
             screen.blit(continue_text, (WIDTH // 2 - continue_text.get_width() // 2, HEIGHT // 2 + 80))
 
             name = self.draw_leaderboard()
@@ -128,18 +128,18 @@ class gameOverScreen():
                             self.handle_new_score(self.name_input)
                             mainMenu()
                         
-                    elif event.key == pygame.K_r:
-                        if self.name_input != '':
-                            self.handle_new_score(self.name_input)
+                    # elif event.key == pygame.K_r:
+                    #     if self.name_input != '':
+                    #         self.handle_new_score(self.name_input)
                             
-                            from main import Game
-                            game = Game()
-                            game.run()
+                    #         from main import Game
+                    #         game = Game()
+                    #         game.run()
                         
-                    elif event.key == pygame.K_q:
-                        if self.name_input != '':
-                            self.handle_new_score(self.name_input)
-                            pygame.quit()                        
+                    # elif event.key == pygame.K_q:
+                    #     if self.name_input != '':
+                    #         self.handle_new_score(self.name_input)
+                    #         pygame.quit()                        
 
                     elif event.key == pygame.K_BACKSPACE:
                         self.name_input = self.name_input[:-1]
@@ -419,9 +419,9 @@ class mainMenu():
                     if difficulty_1_button.checkForInput(OPTIONS_MOUSE_POS):
                         from main import Game
                         player_difficulty.playing = True
-                        self.rooms_cleared = 0
-                        self.player_level = 1
-                        self.upgrade_value = 1.05
+                        player_difficulty.rooms_cleared = 0
+                        player_difficulty.player_level = 1
+                        player_difficulty.upgrade_value = 1.05
                         player_difficulty.diffculty_modifier = 0.1
                         player_difficulty.difficulty = 0.5
                         game = Game()
@@ -431,9 +431,9 @@ class mainMenu():
                     if difficulty_2_button.checkForInput(OPTIONS_MOUSE_POS):
                         from main import Game
                         player_difficulty.playing = True
-                        self.rooms_cleared = 0
-                        self.player_level = 1
-                        self.upgrade_value = 1.1
+                        player_difficulty.rooms_cleared = 0
+                        player_difficulty.player_level = 1
+                        player_difficulty.upgrade_value = 1.1
                         player_difficulty.diffculty_modifier = 0.15
                         player_difficulty.difficulty = 1
                         game = Game()
@@ -442,9 +442,9 @@ class mainMenu():
                     if difficulty_3_button.checkForInput(OPTIONS_MOUSE_POS):
                         from main import Game
                         player_difficulty.playing = True
-                        self.rooms_cleared = 0
-                        self.player_level = 1
-                        self.upgrade_value = 1.2
+                        player_difficulty.rooms_cleared = 0
+                        player_difficulty.player_level = 1
+                        player_difficulty.upgrade_value = 1.2
                         player_difficulty.diffculty_modifier = 0.3
                         player_difficulty.difficulty = 1.3
                         game = Game()
