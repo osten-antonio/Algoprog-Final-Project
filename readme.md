@@ -32,9 +32,7 @@ An infinitely generating rougelike with a class system and leveling system, crea
 
 -------
 # Documentation
-TBA
-------
-# References
-TBA
+The documentation can be accessed [here](https://drive.google.com/file/d/1XERKSoChpGX2gY6xWuCzTkH4miaC-j-z/view?usp=sharing)
+
 
 
