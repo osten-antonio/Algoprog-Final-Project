@@ -7,6 +7,11 @@ An infinitely generating rougelike with a class system and leveling system, crea
 - Pygame
 - Pytmx
 - Pandas
+-----
+## How to run?
+
+Make sure to have all of the requirements installed using py pip, then simply run main.py
+
 ------
 ## Controls
 - Arrow keys - movement
@@ -31,8 +36,9 @@ An infinitely generating rougelike with a class system and leveling system, crea
 - Heals 7% of your max HP periodically
 
 -------
-# Documentation
-The documentation can be accessed [here](https://drive.google.com/file/d/1XERKSoChpGX2gY6xWuCzTkH4miaC-j-z/view?usp=sharing)
+# Project report and demo
+The project report can be accessed [here](https://docs.google.com/document/d/1IbRrFFpFzl1yA1H559wcRhqqPL27w-dAJbOAVbtaY18/edit?usp=sharing)
+The demo can be accessed [here](https://drive.google.com/file/d/1XERKSoChpGX2gY6xWuCzTkH4miaC-j-z/view?usp=sharing)
 
 
 
