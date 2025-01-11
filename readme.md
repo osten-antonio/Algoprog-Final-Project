@@ -38,6 +38,7 @@ Make sure to have all of the requirements installed using py pip, then simply ru
 -------
 # Project report and demo
 The project report can be accessed [here](https://docs.google.com/document/d/1IbRrFFpFzl1yA1H559wcRhqqPL27w-dAJbOAVbtaY18/edit?usp=sharing)
+
 The demo can be accessed [here](https://drive.google.com/file/d/1XERKSoChpGX2gY6xWuCzTkH4miaC-j-z/view?usp=sharing)
 
 
